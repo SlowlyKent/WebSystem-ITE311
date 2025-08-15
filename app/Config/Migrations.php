@@ -29,6 +29,8 @@ class Migrations extends BaseConfig
      */
     public string $table = 'migrations';
 
+    public string $type = 'sequential';
+
     /**
      * --------------------------------------------------------------------------
      * Timestamp Format

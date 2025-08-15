@@ -9,10 +9,10 @@
     
     <style>
         .navbar-custom {
-            background-color: #ADD8E6;
+            background-color: #2b4effff;
         }
         .navbar-custom .navbar-brand,
-        .navbar-custom .nav-link {
+        .navbar-custom .nav-link {  
             color: #000080;
         }
         .navbar-custom .nav-link:hover {
