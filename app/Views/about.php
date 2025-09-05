@@ -10,6 +10,7 @@
   <p>Age: 18</p>
   <p>Gender: Male</p>
   <p>Hobby: Sleeping 😴</p>
+  
   <nav>
     <a href="<?= site_url('/') ?>">Home</a>
     <a href="<?= site_url('contact') ?>">Contact</a>
