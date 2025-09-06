@@ -6,6 +6,11 @@ use CodeIgniter\Router\RouteCollection;
  * @var RouteCollection $routes
  */
 
+//Lab #3 MVC- Routing Configuration 
+$routes->get('/', 'Home::index'); //Home Page
+$routes->get('/about', 'Home::about'); //About Page
+$routes->get('/contact', 'Home::contact'); //Contact Page
+
 // Authentication Routes
 $routes->get('/register', 'Auth::register');
 $routes->post('/register', 'Auth::register');
