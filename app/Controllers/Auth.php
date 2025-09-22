@@ -165,7 +165,7 @@ class Auth extends BaseController
             'allUsers' => $allUsers
         ];
 
-        return view('auth/dashboard', $data);
+        return view('dashboard', $data);
     }
 }
 

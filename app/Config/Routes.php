@@ -7,7 +7,7 @@ use CodeIgniter\Router\RouteCollection;
  */
 
 //Lab #3 MVC- Routing Configuration 
-$routes->get('/', 'Home::index'); //Home Page
+$routes->get('/home', 'Home::index'); //Home Page
 $routes->get('/about', 'Home::about'); //About Page
 $routes->get('/contact', 'Home::contact'); //Contact Page
 
