@@ -5,16 +5,20 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-
-//Lab #3 MVC- Routing Configuration 
-$routes->get('/home', 'Home::index'); //Home Page
-$routes->get('/about', 'Home::about'); //About Page
-$routes->get('/contact', 'Home::contact'); //Contact Page
+$routes->get('/', 'Home::index');
+$routes->get('home', 'Home::index');
+$routes->get('about', 'Home::about');
+$routes->get('contact', 'Home::contact');
 
 // Authentication Routes
-$routes->get('/register', 'Auth::register');
-$routes->post('/register', 'Auth::register');
-$routes->get('/login', 'Auth::login');
-$routes->post('/login', 'Auth::login');
-$routes->get('/logout', 'Auth::logout');
-$routes->get('/dashboard', 'Auth::dashboard');
+$routes->get('register', 'Auth::register');
+$routes->post('register', 'Auth::register');
+$routes->get('login', 'Auth::login');
+$routes->post('login', 'Auth::login');
+$routes->get('logout', 'Auth::logout');
+$routes->get('dashboard', 'Auth::dashboard');
+
+// Role-specific dashboards
+$routes->get('admin/dashboard', 'Admin::dashboard');
+$routes->get('teacher/dashboard', 'Teacher::dashboard');
+$routes->get('student/dashboard', 'Student::dashboard');
