@@ -34,18 +34,10 @@
                             <a class="nav-link" href="<?= base_url('logout'); ?>">Logout</a>
                         </li>
                     <?php else: ?>
-                        <li>
-                            <a class="nav-link" href="<?= base_url(''); ?>">Home</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="<?= base_url('about'); ?>">About</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="<?= base_url('contact'); ?>">Contact</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="<?= base_url('login'); ?>">Login</a>
-                        </li>
+                        <li><a class="nav-link" href="<?= base_url(''); ?>">Home</a> </li>
+                        <li><a class="nav-link" href="<?= base_url('about'); ?>">About</a></li>
+                        <li><a class="nav-link" href="<?= base_url('contact'); ?>">Contact</a></li>
+                        <li> <a class="nav-link" href="<?= base_url('login'); ?>">Login</a></li>
                     <?php endif; ?>
                 </ul>
             </div>
