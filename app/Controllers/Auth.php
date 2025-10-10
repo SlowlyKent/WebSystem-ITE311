@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use App\Models\UserModel;
 use CodeIgniter\Controller;
+use App\Models\EnrollmentModel;
 
 class Auth extends Controller
 {
@@ -120,6 +121,20 @@ class Auth extends Controller
                 'role' => session()->get('role')
             ]
         ];
+
+        // If student, prepare enrolled and available courses
+        if (session()->get('role') === 'student') {
+            $userId = (int) session()->get('user_id');
+            $enrollments = new EnrollmentModel();
+            $enrolledCourses = $enrollments->getUserEnrollments($userId);
+
+            $db = db_connect();
+            // Show ALL courses; the view will disable buttons for already-enrolled items
+            $availableCourses = $db->table('courses')->get()->getResultArray();
+
+            $data['enrolledCourses'] = $enrolledCourses;
+            $data['availableCourses'] = $availableCourses;
+        }
 
         return view('auth/dashboard', $data);
     }
