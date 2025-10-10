@@ -21,7 +21,11 @@
           echo view('teacher', ['user' => $user]);
           break;
         case 'student':
-          echo view('student', ['user' => $user]);
+          echo view('student', [
+            'user' => $user,
+            'enrolledCourses' => $enrolledCourses ?? [],
+            'availableCourses' => $availableCourses ?? [],
+          ]);
           break;
         default:
           echo '<div class="alert alert-warning mt-3">Role not recognized.</div>';
