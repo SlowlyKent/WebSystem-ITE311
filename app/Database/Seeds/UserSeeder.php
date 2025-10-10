@@ -10,7 +10,7 @@ class UserSeeder extends Seeder
     {
         $data = [
             [
-                'name' => 'felicia123',
+                'name' => 'admin',
                 'email' => 'admin@lms.com',
                 'password' => password_hash('admin123', PASSWORD_DEFAULT),
                 'role' => 'admin',
@@ -18,7 +18,7 @@ class UserSeeder extends Seeder
                 'updated_at' => date('Y-m-d H:i:s'),
             ],
             [
-                'name' => 'hariroque123',
+                'name' => 'instructor',
                 'email' => 'instructor@lms.com',
                 'password' => password_hash('instructor123', PASSWORD_DEFAULT),
                 'role' => 'teacher',
@@ -26,7 +26,7 @@ class UserSeeder extends Seeder
                 'updated_at' => date('Y-m-d H:i:s'),
             ],
             [
-                'name' => 'isyot123',
+                'name' => 'student',
                 'email' => 'student@lms.com',
                 'password' => password_hash('student123', PASSWORD_DEFAULT),
                 'role' => 'student',
