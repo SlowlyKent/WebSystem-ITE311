@@ -8,6 +8,9 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
     <!-- Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -357,7 +360,99 @@
         <?= $this->renderSection('content') ?>
     </main>
 
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Notification System -->
+    <?php if (session()->get('isLoggedIn')): ?>
+    <script>
+    $(document).ready(function() {
+        // Function to fetch and display notifications
+        function loadNotifications() {
+            $.get('<?= base_url('notifications') ?>', function(response) {
+                if (response.success) {
+                    const unreadCount = response.unread;
+                    const notifications = response.notifications;
+                    
+                    // Update badge
+                    if (unreadCount > 0) {
+                        $('#notification-badge').text(unreadCount).show();
+                    } else {
+                        $('#notification-badge').hide();
+                    }
+                    
+                    // Clear and populate notification list
+                    const notificationList = $('#notification-list');
+                    // Keep header and divider, remove old notifications
+                    notificationList.find('li:not(:first):not(:nth-child(2))').remove();
+                    
+                    if (notifications.length === 0) {
+                        notificationList.append('<li class="text-center py-3 text-muted" id="no-notifications">No new notifications</li>');
+                    } else {
+                        notifications.forEach(function(notif) {
+                            const isUnread = notif.is_read == 0;
+                            const bgClass = isUnread ? 'bg-light' : '';
+                            const boldClass = isUnread ? 'fw-bold' : '';
+                            
+                            const notifItem = `
+                                <li class="dropdown-item ${bgClass}" data-id="${notif.id}">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <p class="mb-1 ${boldClass}" style="font-size: 0.9rem;">${notif.message}</p>
+                                            <small class="text-muted">${new Date(notif.created_at).toLocaleString()}</small>
+                                        </div>
+                                        ${isUnread ? `<button class="btn btn-sm btn-primary mark-read-btn" data-id="${notif.id}">Mark as Read</button>` : ''}
+                                    </div>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                            `;
+                            notificationList.append(notifItem);
+                        });
+                    }
+                }
+            }).fail(function(xhr) {
+                console.error('Failed to load notifications:', xhr);
+            });
+        }
+        
+        // Mark individual notification as read
+        $(document).on('click', '.mark-read-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const notifId = $(this).data('id');
+            
+            $.post('<?= base_url('notifications/mark_read') ?>/' + notifId, function(response) {
+                if (response.success) {
+                    loadNotifications();
+                }
+            }).fail(function(xhr) {
+                console.error('Failed to mark as read:', xhr);
+            });
+        });
+        
+        // Mark all notifications as read
+        $(document).on('click', '#mark-all-read', function(e) {
+            e.preventDefault();
+            
+            $.post('<?= base_url('notifications/mark_all') ?>', function(response) {
+                if (response.success) {
+                    loadNotifications();
+                }
+            }).fail(function(xhr) {
+                console.error('Failed to mark all as read:', xhr);
+            });
+        });
+        
+        // Load notifications on page load
+        loadNotifications();
+        
+        // Refresh notifications every 60 seconds
+        setInterval(loadNotifications, 60000);
+    });
+    </script>
+    <?php endif; ?>
 </body>
 </html>
