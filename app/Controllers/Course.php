@@ -70,6 +70,53 @@ class Course extends BaseController
                 ->setJSON(['status' => 'error', 'message' => 'Failed to enroll']);
         }
 
+        // Create notifications for enrollment
+        try {
+            $notificationModel = new \App\Models\NotificationModel();
+            $studentName = session()->get('name') ?? 'A student';
+            $courseTitle = $course['title'] ?? 'a course';
+            
+            // Notify the student
+            $notificationModel->insert([
+                'user_id' => $userId,
+                'message' => 'You have been enrolled in ' . $courseTitle,
+                'is_read' => 0,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            // Notify all teachers
+            $enrollmentModel = new \App\Models\EnrollmentModel();
+            $teachers = $enrollmentModel->db->table('users')->select('id')->where('role', 'teacher')->get()->getResultArray();
+            foreach ($teachers as $teacher) {
+                $teacherId = (int)($teacher['id'] ?? 0);
+                if ($teacherId > 0) {
+                    $notificationModel->insert([
+                        'user_id' => $teacherId,
+                        'message' => $studentName . ' enrolled in ' . $courseTitle,
+                        'is_read' => 0,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
+                }
+            }
+            
+            // Notify all admins
+            $admins = $enrollmentModel->db->table('users')->select('id')->where('role', 'admin')->get()->getResultArray();
+            foreach ($admins as $admin) {
+                $adminId = (int)($admin['id'] ?? 0);
+                if ($adminId > 0) {
+                    $notificationModel->insert([
+                        'user_id' => $adminId,
+                        'message' => $studentName . ' enrolled in ' . $courseTitle,
+                        'is_read' => 0,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Log error but don't fail the enrollment
+            log_message('error', 'Failed to create enrollment notification: ' . $e->getMessage());
+        }
+
         $security = service('security');
         return $this->response->setJSON([
             'status' => 'success',
