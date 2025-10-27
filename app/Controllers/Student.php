@@ -15,6 +15,27 @@ class Student extends Controller
             return redirect()->to(base_url('login'));
         }
 
+        $data = [
+            'title' => 'Student Dashboard',
+            'user' => [
+                'name' => session()->get('name'),
+                'email' => session()->get('email'),
+                'role' => session()->get('role')
+            ],
+            'showEnrollments' => false,
+        ];
+
+        return view('student', $data);
+    }
+
+    public function enrollments()
+    {
+        // Check if user is logged in and is student
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'student') {
+            session()->setFlashdata('error', 'Access denied. Student privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
         $userId = (int) session()->get('user_id');
 
         $enrollments = new EnrollmentModel();
@@ -30,7 +51,7 @@ class Student extends Controller
         $availableCourses = $builder->get()->getResultArray();
 
         $data = [
-            'title' => 'Student Dashboard',
+            'title' => 'My Enrollments',
             'user' => [
                 'name' => session()->get('name'),
                 'email' => session()->get('email'),
@@ -38,6 +59,7 @@ class Student extends Controller
             ],
             'enrolledCourses' => $enrolledCourses,
             'availableCourses' => $availableCourses,
+            'showEnrollments' => true,
         ];
 
         return view('student', $data);
