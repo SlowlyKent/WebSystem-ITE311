@@ -151,6 +151,148 @@
                         </table>
                     </div>
 
+                    <?php if (($user['role'] ?? '') === 'admin'): ?>
+                        <hr class="my-4">
+                        
+                        <h5 class="mb-3"> Enrolled Students</h5>
+                        <p class="text-muted">Manage students enrolled in this course. You can view details, remove wrong enrollments, or activate/deactivate student access.</p>
+                        
+                        <?php if (!empty($enrolledStudents ?? []) && count($enrolledStudents) > 0): ?>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Student Name</th>
+                                            <th>Email</th>
+                                            <th>Enrollment Date</th>
+                                            <th>Enrollment Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($enrolledStudents as $enrollment): ?>
+                                            <tr>
+                                                <td><?= esc($enrollment['name'] ?? 'Unknown') ?></td>
+                                                <td><?= esc($enrollment['email'] ?? 'N/A') ?></td>
+                                                <td><?= esc($enrollment['enrollment_date'] ? date('M d, Y h:i A', strtotime($enrollment['enrollment_date'])) : 'N/A') ?></td>
+                                                <td>
+                                                    <?php 
+                                                    $enrollmentStatus = $enrollment['status'] ?? 'active';
+                                                    $badgeClass = ($enrollmentStatus === 'active') ? 'bg-success' : 'bg-secondary';
+                                                    ?>
+                                                    <span class="badge <?= $badgeClass ?>">
+                                                        <?= ucfirst($enrollmentStatus) ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm" role="group">
+                                                        <!-- View Button -->
+                                                        <button type="button" 
+                                                                class="btn btn-info btn-sm" 
+                                                                data-bs-toggle="modal" 
+                                                                data-bs-target="#viewStudentModal<?= $enrollment['id'] ?>"
+                                                                title="View Student Details">
+                                                            <i class="bi bi-eye"></i>
+                                                        </button>
+                                                        
+                                                        <?php if ($enrollmentStatus === 'active'): ?>
+                                                            <!-- Deactivate Button -->
+                                                            <a href="<?= base_url('admin/enrollments/deactivate/' . $enrollment['id']) ?>" 
+                                                               class="btn btn-warning btn-sm"
+                                                               onclick="return confirm('Are you sure you want to deactivate this student\\'s enrollment? They will not be able to access this course.');"
+                                                               title="Deactivate Enrollment">
+                                                                <i class="bi bi-pause-circle"></i>
+                                                            </a>
+                                                        <?php else: ?>
+                                                            <!-- Activate Button -->
+                                                            <a href="<?= base_url('admin/enrollments/activate/' . $enrollment['id']) ?>" 
+                                                               class="btn btn-success btn-sm"
+                                                               onclick="return confirm('Are you sure you want to activate this student\\'s enrollment? They will be able to access this course.');"
+                                                               title="Activate Enrollment">
+                                                                <i class="bi bi-play-circle"></i>
+                                                            </a>
+                                                        <?php endif; ?>
+                                                        
+                                                        <!-- Delete Button -->
+                                                        <a href="<?= base_url('admin/enrollments/delete/' . $enrollment['id']) ?>" 
+                                                           class="btn btn-danger btn-sm"
+                                                           onclick="return confirm('Are you sure you want to remove this student from this course? This action cannot be undone.');"
+                                                           title="Remove Student from Course">
+                                                            <i class="bi bi-trash"></i>
+                                                        </a>
+                                                    </div>
+                                                    
+                                                    <!-- View Student Modal -->
+                                                    <div class="modal fade" id="viewStudentModal<?= $enrollment['id'] ?>" tabindex="-1" aria-labelledby="viewStudentModalLabel<?= $enrollment['id'] ?>" aria-hidden="true">
+                                                        <div class="modal-dialog">
+                                                            <div class="modal-content">
+                                                                <div class="modal-header bg-info text-white">
+                                                                    <h5 class="modal-title" id="viewStudentModalLabel<?= $enrollment['id'] ?>">
+                                                                        <i class="bi bi-person-circle"></i> Student Details
+                                                                    </h5>
+                                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                </div>
+                                                                <div class="modal-body">
+                                                                    <div class="mb-3">
+                                                                        <strong>Name:</strong> <?= esc($enrollment['name'] ?? 'N/A') ?>
+                                                                    </div>
+                                                                    <div class="mb-3">
+                                                                        <strong>Email:</strong> <?= esc($enrollment['email'] ?? 'N/A') ?>
+                                                                    </div>
+                                                                    <div class="mb-3">
+                                                                        <strong>Role:</strong> 
+                                                                        <span class="badge bg-primary"><?= esc(ucfirst($enrollment['role'] ?? 'N/A')) ?></span>
+                                                                    </div>
+                                                                    <div class="mb-3">
+                                                                        <strong>User Status:</strong> 
+                                                                        <?php 
+                                                                        $userStatus = $enrollment['user_status'] ?? 'active';
+                                                                        $userBadgeClass = ($userStatus === 'active') ? 'bg-success' : 'bg-secondary';
+                                                                        ?>
+                                                                        <span class="badge <?= $userBadgeClass ?>">
+                                                                            <?= ucfirst($userStatus) ?>
+                                                                        </span>
+                                                                    </div>
+                                                                    <div class="mb-3">
+                                                                        <strong>Course:</strong> <?= esc($course['title'] ?? 'N/A') ?>
+                                                                    </div>
+                                                                    <div class="mb-3">
+                                                                        <strong>Course Code:</strong> <?= esc($course['course_code'] ?? 'N/A') ?>
+                                                                    </div>
+                                                                    <div class="mb-3">
+                                                                        <strong>Enrollment Date:</strong> 
+                                                                        <?= esc($enrollment['enrollment_date'] ? date('F d, Y h:i A', strtotime($enrollment['enrollment_date'])) : 'N/A') ?>
+                                                                    </div>
+                                                                    <div class="mb-3">
+                                                                        <strong>Enrollment Status:</strong> 
+                                                                        <?php 
+                                                                        $enrollmentStatus = $enrollment['status'] ?? 'active';
+                                                                        $badgeClass = ($enrollmentStatus === 'active') ? 'bg-success' : 'bg-secondary';
+                                                                        ?>
+                                                                        <span class="badge <?= $badgeClass ?>">
+                                                                            <?= ucfirst($enrollmentStatus) ?>
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="modal-footer">
+                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> No students enrolled in this course yet.
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
                     <div class="mt-3">
                         <?php if (($user['role'] ?? '') === 'admin'): ?>
                             <a href="<?= base_url('admin/courses') ?>" class="btn btn-secondary">

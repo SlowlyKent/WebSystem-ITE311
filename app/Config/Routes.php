@@ -43,6 +43,12 @@ $routes->get('admin/users/delete/(:num)', 'Admin::deleteUser/$1');
 $routes->get('admin/users/activate/(:num)', 'Admin::activateUser/$1');
 $routes->get('admin/users/inactivate/(:num)', 'Admin::inactivateUser/$1');
 
+// Admin Enrollment Management Routes
+$routes->get('admin/enrollments/view/(:num)', 'Admin::viewEnrollment/$1');
+$routes->get('admin/enrollments/delete/(:num)', 'Admin::deleteEnrollment/$1');
+$routes->get('admin/enrollments/activate/(:num)', 'Admin::activateEnrollment/$1');
+$routes->get('admin/enrollments/deactivate/(:num)', 'Admin::deactivateEnrollment/$1');
+
 // Student Routes
 $routes->get('student/enrollments', 'Student::enrollments');
 $routes->get('student/courses/view/(:num)', 'Material::index/$1');

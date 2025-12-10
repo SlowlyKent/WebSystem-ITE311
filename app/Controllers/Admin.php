@@ -579,5 +579,165 @@ class Admin extends Controller
 
         return redirect()->to(base_url('admin/users'));
     }
+
+    // View student enrollment details
+    public function viewEnrollment($enrollment_id)
+    {
+        // Check if user is admin
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $enrollmentModel = new \App\Models\EnrollmentModel();
+        $userModel = new UserModel();
+        $courseModel = new CourseModel();
+
+        // Get enrollment details with student and course info
+        $enrollment = $enrollmentModel->select('enrollments.*, users.name, users.email, users.role, users.status as user_status, courses.title as course_title, courses.course_code')
+                                      ->join('users', 'users.id = enrollments.user_id')
+                                      ->join('courses', 'courses.id = enrollments.course_id')
+                                      ->where('enrollments.id', $enrollment_id)
+                                      ->first();
+
+        if (!$enrollment) {
+            session()->setFlashdata('error', 'Enrollment not found.');
+            return redirect()->back();
+        }
+
+        $data = [
+            'title' => 'View Enrollment',
+            'user' => [
+                'name' => session()->get('name'),
+                'email' => session()->get('email'),
+                'role' => session()->get('role')
+            ],
+            'enrollment' => $enrollment
+        ];
+
+        // Return JSON for AJAX or view for direct access
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'status' => 'success',
+                'enrollment' => $enrollment
+            ]);
+        }
+
+        // For direct access, show a simple view
+        return view('admin/enrollment_view', $data);
+    }
+
+    // Delete student enrollment (remove from course)
+    public function deleteEnrollment($enrollment_id)
+    {
+        // Check if user is admin
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $enrollmentModel = new \App\Models\EnrollmentModel();
+        
+        // Get enrollment details before deleting
+        $enrollment = $enrollmentModel->select('enrollments.*, users.name, courses.title as course_title, courses.id as course_id')
+                                      ->join('users', 'users.id = enrollments.user_id')
+                                      ->join('courses', 'courses.id = enrollments.course_id')
+                                      ->where('enrollments.id', $enrollment_id)
+                                      ->first();
+
+        if (!$enrollment) {
+            session()->setFlashdata('error', 'Enrollment not found.');
+            return redirect()->back();
+        }
+
+        $courseId = $enrollment['course_id'];
+        $studentName = $enrollment['name'] ?? 'Student';
+        $courseTitle = $enrollment['course_title'] ?? 'Course';
+
+        // Delete the enrollment
+        if ($enrollmentModel->delete($enrollment_id)) {
+            session()->setFlashdata('success', 'Student "' . $studentName . '" has been removed from course "' . $courseTitle . '".');
+            
+            // Redirect back to course view
+            return redirect()->to(base_url('admin/courses/view/' . $courseId));
+        } else {
+            session()->setFlashdata('error', 'Failed to delete enrollment.');
+            return redirect()->back();
+        }
+    }
+
+    // Activate student enrollment (allow access to course)
+    public function activateEnrollment($enrollment_id)
+    {
+        // Check if user is admin
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $enrollmentModel = new \App\Models\EnrollmentModel();
+        
+        // Get enrollment details
+        $enrollment = $enrollmentModel->select('enrollments.*, users.name, courses.title as course_title, courses.id as course_id')
+                                      ->join('users', 'users.id = enrollments.user_id')
+                                      ->join('courses', 'courses.id = enrollments.course_id')
+                                      ->where('enrollments.id', $enrollment_id)
+                                      ->first();
+
+        if (!$enrollment) {
+            session()->setFlashdata('error', 'Enrollment not found.');
+            return redirect()->back();
+        }
+
+        $courseId = $enrollment['course_id'];
+        $studentName = $enrollment['name'] ?? 'Student';
+        $courseTitle = $enrollment['course_title'] ?? 'Course';
+
+        // Update enrollment status to active
+        if ($enrollmentModel->update($enrollment_id, ['status' => 'active'])) {
+            session()->setFlashdata('success', 'Student "' . $studentName . '" enrollment activated. Student can now access course "' . $courseTitle . '".');
+            return redirect()->to(base_url('admin/courses/view/' . $courseId));
+        } else {
+            session()->setFlashdata('error', 'Failed to activate enrollment.');
+            return redirect()->back();
+        }
+    }
+
+    // Deactivate student enrollment (block access to course)
+    public function deactivateEnrollment($enrollment_id)
+    {
+        // Check if user is admin
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $enrollmentModel = new \App\Models\EnrollmentModel();
+        
+        // Get enrollment details
+        $enrollment = $enrollmentModel->select('enrollments.*, users.name, courses.title as course_title, courses.id as course_id')
+                                      ->join('users', 'users.id = enrollments.user_id')
+                                      ->join('courses', 'courses.id = enrollments.course_id')
+                                      ->where('enrollments.id', $enrollment_id)
+                                      ->first();
+
+        if (!$enrollment) {
+            session()->setFlashdata('error', 'Enrollment not found.');
+            return redirect()->back();
+        }
+
+        $courseId = $enrollment['course_id'];
+        $studentName = $enrollment['name'] ?? 'Student';
+        $courseTitle = $enrollment['course_title'] ?? 'Course';
+
+        // Update enrollment status to inactive
+        if ($enrollmentModel->update($enrollment_id, ['status' => 'inactive'])) {
+            session()->setFlashdata('success', 'Student "' . $studentName . '" enrollment deactivated. Student cannot access course "' . $courseTitle . '" now.');
+            return redirect()->to(base_url('admin/courses/view/' . $courseId));
+        } else {
+            session()->setFlashdata('error', 'Failed to deactivate enrollment.');
+            return redirect()->back();
+        }
+    }
 }
 

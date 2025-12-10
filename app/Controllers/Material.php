@@ -31,6 +31,12 @@ class Material extends BaseController
             ]
         ];
 
+        // If admin is viewing, also get enrolled students for this course
+        $userRole = session()->get('role');
+        if ($userRole === 'admin') {
+            $data['enrolledStudents'] = $this->enrollmentModel->getCourseEnrollments($course_id);
+        }
+
         return view('materials/list', $data);
     }
 
