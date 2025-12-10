@@ -369,19 +369,29 @@
     <!-- Notification System -->
     <?php if (session()->get('isLoggedIn')): ?>
     <script>
+    // Make loadNotifications globally accessible
+    let loadNotifications;
+    
     $(document).ready(function() {
+        // Get CSRF token for AJAX requests
+        const csrfTokenName = '<?= csrf_token() ?>';
+        const csrfTokenValue = '<?= csrf_hash() ?>';
+        
         // Function to fetch and display notifications
-        function loadNotifications() {
+        loadNotifications = function() {
             $.get('<?= base_url('notifications') ?>', function(response) {
                 if (response.success) {
-                    const unreadCount = response.unread;
+                    const unreadCount = parseInt(response.unread) || 0;
                     const notifications = response.notifications;
                     
-                    // Update badge
+                    // Update badge count - always use the exact count from server
+                    const badgeElement = $('#notification-badge');
                     if (unreadCount > 0) {
-                        $('#notification-badge').text(unreadCount).show();
+                        badgeElement.text(unreadCount).show();
                     } else {
-                        $('#notification-badge').hide();
+                        // Hide badge when count is 0
+                        badgeElement.hide();
+                        badgeElement.text('0');
                     }
                     
                     // Clear and populate notification list
@@ -389,25 +399,28 @@
                     // Keep header and divider, remove old notifications
                     notificationList.find('li:not(:first):not(:nth-child(2))').remove();
                     
-                    if (notifications.length === 0) {
+                    // Filter to show ONLY UNREAD notifications
+                    const unreadNotifications = notifications.filter(function(notif) {
+                        return notif.is_read == 0;
+                    });
+                    
+                    // Show only unread notifications in the dropdown
+                    if (unreadNotifications.length === 0) {
                         notificationList.append('<li class="text-center py-3 text-muted" id="no-notifications">No new notifications</li>');
                     } else {
-                        notifications.forEach(function(notif) {
-                            const isUnread = notif.is_read == 0;
-                            const bgClass = isUnread ? 'bg-light' : '';
-                            const boldClass = isUnread ? 'fw-bold' : '';
-                            
+                        unreadNotifications.forEach(function(notif) {
                             const notifItem = `
-                                <li class="dropdown-item ${bgClass}" data-id="${notif.id}">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div class="flex-grow-1">
-                                            <p class="mb-1 ${boldClass}" style="font-size: 0.9rem;">${notif.message}</p>
-                                            <small class="text-muted">${new Date(notif.created_at).toLocaleString()}</small>
+                                <li class="dropdown-item p-0" data-id="${notif.id}">
+                                    <div class="alert alert-info mb-2 mx-2" style="border-radius: 6px;">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <p class="mb-1 fw-bold" style="font-size: 0.9rem; margin: 0;">${notif.message}</p>
+                                                <small class="text-muted">${new Date(notif.created_at).toLocaleString()}</small>
+                                            </div>
+                                            <button class="btn btn-sm btn-primary mark-read-btn ms-2" data-id="${notif.id}" style="white-space: nowrap;">Mark as Read</button>
                                         </div>
-                                        ${isUnread ? `<button class="btn btn-sm btn-primary mark-read-btn" data-id="${notif.id}">Mark as Read</button>` : ''}
                                     </div>
                                 </li>
-                                <li><hr class="dropdown-divider"></li>
                             `;
                             notificationList.append(notifItem);
                         });
@@ -422,14 +435,76 @@
         $(document).on('click', '.mark-read-btn', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            const notifId = $(this).data('id');
             
-            $.post('<?= base_url('notifications/mark_read') ?>/' + notifId, function(response) {
-                if (response.success) {
-                    loadNotifications();
+            // Get the button and notification item
+            const $btn = $(this);
+            const notifId = $btn.data('id');
+            const $notifItem = $btn.closest('li'); // Get the parent list item
+            
+            // Disable button immediately to prevent multiple clicks
+            $btn.prop('disabled', true);
+            $btn.text('Marking...');
+            $btn.removeClass('btn-primary').addClass('btn-secondary');
+            
+            // Prepare data with CSRF token
+            const postData = {};
+            postData[csrfTokenName] = csrfTokenValue;
+            
+            $.ajax({
+                url: '<?= base_url('notifications/mark_read') ?>/' + notifId,
+                type: 'POST',
+                data: postData,
+                headers: {
+                    'X-CSRF-TOKEN': csrfTokenValue
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Remove the notification from the list immediately
+                        $notifItem.fadeOut(300, function() {
+                            $(this).remove();
+                            
+                            // Check if there are any notifications left
+                            const remainingNotifications = $('#notification-list li:not(:first):not(:nth-child(2))').length;
+                            if (remainingNotifications === 0) {
+                                // Show "No new notifications" message
+                                $('#notification-list').append('<li class="text-center py-3 text-muted" id="no-notifications">No new notifications</li>');
+                            }
+                        });
+                        
+                        // Update badge count immediately
+                        const badgeElement = $('#notification-badge');
+                        let currentCount = parseInt(badgeElement.text()) || 0;
+                        currentCount = Math.max(0, currentCount - 1); // Don't go below 0
+                        
+                        if (currentCount > 0) {
+                            badgeElement.text(currentCount).show();
+                        } else {
+                            badgeElement.hide();
+                            badgeElement.text('0');
+                        }
+                        
+                        // Reload notifications to sync with server (this will update the count accurately)
+                        loadNotifications();
+                    } else {
+                        // If failed, re-enable button
+                        $btn.prop('disabled', false);
+                        $btn.text('Mark as Read');
+                        $btn.removeClass('btn-secondary').addClass('btn-primary');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Failed to mark as read:', xhr);
+                    // If failed, re-enable button
+                    $btn.prop('disabled', false);
+                    $btn.text('Mark as Read');
+                    $btn.removeClass('btn-secondary').addClass('btn-primary');
+                    
+                    // If CSRF error, reload page to get new token
+                    if (xhr.status === 403) {
+                        alert('Session expired. Please refresh the page.');
+                        location.reload();
+                    }
                 }
-            }).fail(function(xhr) {
-                console.error('Failed to mark as read:', xhr);
             });
         });
         
@@ -437,20 +512,38 @@
         $(document).on('click', '#mark-all-read', function(e) {
             e.preventDefault();
             
-            $.post('<?= base_url('notifications/mark_all') ?>', function(response) {
-                if (response.success) {
-                    loadNotifications();
+            // Prepare data with CSRF token
+            const postData = {};
+            postData[csrfTokenName] = csrfTokenValue;
+            
+            $.ajax({
+                url: '<?= base_url('notifications/mark_all') ?>',
+                type: 'POST',
+                data: postData,
+                headers: {
+                    'X-CSRF-TOKEN': csrfTokenValue
+                },
+                success: function(response) {
+                    if (response.success) {
+                        loadNotifications();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Failed to mark all as read:', xhr);
+                    if (xhr.status === 403) {
+                        alert('Session expired. Please refresh the page.');
+                        location.reload();
+                    }
                 }
-            }).fail(function(xhr) {
-                console.error('Failed to mark all as read:', xhr);
             });
         });
         
         // Load notifications on page load
         loadNotifications();
         
-        // Refresh notifications every 5 seconds (5000 milliseconds)
-        setInterval(loadNotifications, 5000);
+        // Optional: Refresh notifications every 60 seconds (60000 milliseconds) for real-time updates
+        // This simulates real-time notifications without constant polling
+        setInterval(loadNotifications, 60000);
     });
     </script>
     <?php endif; ?>

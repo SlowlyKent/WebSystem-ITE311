@@ -27,7 +27,17 @@ class NotificationModel extends Model
 
     public function getNotificationsForUser(int $userId, int $limit = 5): array
     {
+        // Get latest notifications (both read and unread, but limit the results)
         return $this->where('user_id', $userId)
+                    ->orderBy('created_at', 'DESC')
+                    ->findAll($limit);
+    }
+    
+    // Get only unread notifications for user
+    public function getUnreadNotificationsForUser(int $userId, int $limit = 5): array
+    {
+        return $this->where('user_id', $userId)
+                    ->where('is_read', 0)
                     ->orderBy('created_at', 'DESC')
                     ->findAll($limit);
     }

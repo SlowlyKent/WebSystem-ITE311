@@ -297,31 +297,57 @@ class Material extends BaseController
                             'user_id' => (int)$uid,
                             'message' => 'New material uploaded in ' . $courseTitle,
                             'is_read' => 0,
+                            'created_at' => date('Y-m-d H:i:s')
                         ]);
                     }
 
                     // Additionally notify based on actor role
                     $actorRole = session()->get('role');
+                    $actorId = (int) session()->get('user_id');
+                    $fileName = $file->getClientName();
+                    
                     if ($actorRole === 'admin') {
-                        // Admin uploaded: notify the course instructor (if any)
+                        // Admin uploaded: notify the admin who uploaded
+                        if ($actorId > 0) {
+                            $nm->insert([
+                                'user_id' => $actorId,
+                                'message' => 'You have successfully uploaded material "' . $fileName . '" to ' . $courseTitle,
+                                'is_read' => 0,
+                                'created_at' => date('Y-m-d H:i:s')
+                            ]);
+                        }
+                        
+                        // Also notify the course instructor (if any)
                         $instructorId = (int)($course['instructor_id'] ?? 0);
                         if ($instructorId > 0) {
                             $nm->insert([
                                 'user_id' => $instructorId,
-                                'message' => 'Admin uploaded new material to your course: ' . $courseTitle,
+                                'message' => 'Admin uploaded new material "' . $fileName . '" to your course: ' . $courseTitle,
                                 'is_read' => 0,
+                                'created_at' => date('Y-m-d H:i:s')
                             ]);
                         }
                     } elseif ($actorRole === 'teacher') {
-                        // Teacher uploaded: notify all admins
+                        // Teacher uploaded: notify the teacher who uploaded
+                        if ($actorId > 0) {
+                            $nm->insert([
+                                'user_id' => $actorId,
+                                'message' => 'You have successfully uploaded material "' . $fileName . '" to ' . $courseTitle,
+                                'is_read' => 0,
+                                'created_at' => date('Y-m-d H:i:s')
+                            ]);
+                        }
+                        
+                        // Also notify all admins
                         $admins = $this->enrollmentModel->db->table('users')->select('id')->where('role', 'admin')->get()->getResultArray();
                         foreach ($admins as $a) {
                             $aid = (int)($a['id'] ?? 0);
                             if ($aid > 0) {
                                 $nm->insert([
                                     'user_id' => $aid,
-                                    'message' => 'Teacher uploaded new material in ' . $courseTitle,
+                                    'message' => 'Teacher uploaded new material "' . $fileName . '" in ' . $courseTitle,
                                     'is_read' => 0,
+                                    'created_at' => date('Y-m-d H:i:s')
                                 ]);
                             }
                         }

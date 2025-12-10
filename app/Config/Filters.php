@@ -73,7 +73,7 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             // 'honeypot',
-            'csrf', // Security 3: Enable CSRF Protection for all POST requests
+            'csrf' => ['except' => ['courses/search']], // Security 3: Enable CSRF Protection for all POST requests, except search (read-only)
             // 'invalidchars',
         ],
         'after' => [

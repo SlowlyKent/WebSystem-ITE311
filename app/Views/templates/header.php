@@ -36,8 +36,8 @@
                         <!-- Notification Dropdown -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-bell-fill"></i>
-                                <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" id="notification-badge" style="display:none;">0</span>
+                                <i class="bi bi-bell-fill" style="font-size: 0.9rem;"></i>
+                                <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" id="notification-badge" style="display:none; font-size: 0.65rem; padding: 0.15em 0.4em;">0</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" id="notification-list" style="min-width: 300px; max-height: 400px; overflow-y: auto;">
                                 <li><h6 class="dropdown-header">Notifications</h6></li>

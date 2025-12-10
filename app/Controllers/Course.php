@@ -8,6 +8,24 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 class Course extends BaseController
 {
+    // Display courses listing page
+    public function index()
+    {
+        $courseModel = new \App\Models\CourseModel();
+        
+        $courses = $courseModel->where('status', 'Active')->findAll();
+        
+        $data = [
+            'title' => 'Browse Courses',
+            'courses' => $courses,
+            'user' => [
+                'name' => session()->get('name') ?? 'Guest',
+                'role' => session()->get('role') ?? 'guest'
+            ]
+        ];
+
+        return view('courses/index', $data);
+    }
     
     public function enroll()
     {
@@ -197,6 +215,29 @@ class Course extends BaseController
                 'token' => $security->getTokenName(),
                 'hash' => $security->getHash()
             ]
+        ]);
+    }
+
+    public function search()
+    {
+
+        $searchTerm = $this->request->getGet('search_term') ?? $this->request->getPost('search_term');
+        $courseModel = new \App\Models\CourseModel();
+        
+        if (!empty($searchTerm)) {
+            $courseModel->like('title', $searchTerm);
+            $courseModel->orLike('description', $searchTerm);
+        }
+        
+        $courses = $courseModel->findAll();
+        
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON($courses);
+        }
+        
+        return view('courses/search_results', [
+            'courses' => $courses,
+            'searchTerm' => $searchTerm
         ]);
     }
 }

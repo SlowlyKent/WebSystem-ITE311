@@ -20,8 +20,13 @@ $routes->get('logout', 'Auth::logout');
 // Dashboards Routes
 $routes->get('dashboard', 'Auth::dashboard');
 
-// Course Enrollment Route
+// Course Routes
+$routes->get('/courses', 'Course::index');
 $routes->post('/course/enroll', 'Course::enroll');
+
+// Course Search Routes
+$routes->get('/courses/search', 'Course::search');
+$routes->post('/courses/search', 'Course::search');
 
 // Teacher Routes
 $routes->get('teacher/courses', 'Teacher::courses');

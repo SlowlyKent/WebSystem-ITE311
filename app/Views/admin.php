@@ -1,6 +1,67 @@
 <?= $this->extend('template') ?>
 
 <?= $this->section('content') ?>
+<style>
+    /* Course Management Card Styling - Square Cards with Equal Size */
+    .course-item {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        aspect-ratio: 1;
+    }
+    
+    .course-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    }
+    
+    .course-item .card-body {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        padding: 1rem;
+        height: 100%;
+    }
+    
+    .course-item .card-title {
+        color: #1f2937;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+        line-height: 1.3;
+    }
+    
+    .course-item .card-text {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+        flex-grow: 1;
+        display: flex;
+        align-items: flex-start;
+        line-height: 1.4;
+        overflow: hidden;
+    }
+    
+    .course-item .btn {
+        margin-top: auto;
+        width: 100%;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.85rem;
+    }
+    
+    /* Make sure all cards in a row have the same height and are square */
+    .row .col-md-3 {
+        display: flex;
+    }
+    
+    .row .col-md-3 > .card {
+        width: 100%;
+        aspect-ratio: 1;
+    }
+</style>
 <div class="container mt-4">
     <div class="row">
         <div class="col-12">
@@ -38,6 +99,17 @@
                                 
                                 <p class="lead mb-3">Manage all users. You can create, edit, and delete any user.</p>
 
+                                <!-- Search Bar for Users -->
+                                <div class="mb-3">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="userSearchInput" 
+                                               placeholder="Search users by name, email, or role...">
+                                    </div>
+                                </div>
+
                                 <?php if (!empty($users ?? []) && count($users) > 0): ?>
                                     <div class="table-responsive">
                                         <table class="table table-striped table-hover">
@@ -52,9 +124,9 @@
                                                     <th>Actions</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
+                                            <tbody id="userTableBody">
                                                 <?php foreach ($users as $u): ?>
-                                                    <tr>
+                                                    <tr class="user-row" data-name="<?= esc(strtolower($u['name'])) ?>" data-email="<?= esc(strtolower($u['email'])) ?>" data-role="<?= esc(strtolower($u['role'])) ?>">
                                                         <td><?= esc($u['id']) ?></td>
                                                         <td><?= esc($u['name']) ?></td>
                                                         <td><?= esc($u['email']) ?></td>
@@ -124,13 +196,13 @@
                                                                             <i class="bi bi-check-circle"></i>
                                                                         </a>
                                                                     <?php endif; ?>
-                                                                    <a href="<?= base_url('admin/users/delete/' . $u['id']) ?>" 
+                                                                <a href="<?= base_url('admin/users/delete/' . $u['id']) ?>" 
                                                                        class="btn btn-sm btn-outline-danger" 
                                                                        title="Delete User"
                                                                        data-bs-toggle="tooltip"
-                                                                       onclick="return confirm('Are you sure you want to delete this user?');">
+                                                                   onclick="return confirm('Are you sure you want to delete this user?');">
                                                                         <i class="bi bi-trash"></i>
-                                                                    </a>
+                                                                </a>
                                                                 </div>
                                                             <?php endif; ?>
                                                         </td>
@@ -477,24 +549,6 @@
                                                 </div>
                                                 
                                                 <div class="col-md-6 mb-3">
-                                                    <label for="status" class="form-label">Status</label>
-                                                    <select class="form-select" id="status" name="status">
-                                                        <option value="Active" selected>Active</option>
-                                                        <option value="Inactive">Inactive</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label for="allow_self_enrollment" class="form-label">Allow Self-Enrollment?</label>
-                                                    <select class="form-select" id="allow_self_enrollment" name="allow_self_enrollment">
-                                                        <option value="0">No</option>
-                                                        <option value="1">Yes</option>
-                                                    </select>
-                                                </div>
-                                                
-                                                <div class="col-md-6 mb-3">
                                                     <label for="grading_scheme" class="form-label">Grading Scheme Type</label>
                                                     <select class="form-select" id="grading_scheme" name="grading_scheme">
                                                         <option value="">Select Grading Scheme</option>
@@ -538,25 +592,50 @@
                                     </div>
                                 <?php endif; ?>
                                 
-                                <p class="lead mb-3">Manage all courses here.</p>
+                                <!-- Search Bar for Courses -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <form id="adminCourseSearchForm" class="d-flex">
+                                            <div class="input-group">
+                                                <input type="text" 
+                                                       class="form-control" 
+                                                       id="courseSearchInput" 
+                                                       name="search_term" 
+                                                       placeholder="Search courses...">
+                                                <button type="submit" class="btn btn-outline-primary">
+                                                    <i class="bi bi-search"></i> Search
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
 
-                                <?php if (!empty($courses ?? []) && count($courses) > 0): ?>
-                                    <ul class="list-group list-group-flush mt-3">
-                                        <?php foreach ($courses as $course): ?>
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <div class="fw-bold"><?= esc($course['title'] ?? 'Untitled') ?></div>
-                                                    <small class="text-muted"><?= esc($course['description'] ?? '') ?></small>
+                                <!-- Courses Grid Container -->
+                                <div id="adminCoursesContainer" class="row">
+                                        <?php if (!empty($courses ?? []) && count($courses) > 0): ?>
+                                            <?php foreach ($courses as $course): ?>
+                                                <div class="col-md-3 mb-4">
+                                                <div class="card course-item" 
+                                                     data-title="<?= esc(strtolower(trim($course['title'] ?? 'Untitled'))) ?>" 
+                                                     data-description="<?= esc(strtolower(trim($course['description'] ?? ''))) ?>"
+                                                     data-code="<?= esc(strtolower(trim($course['course_code'] ?? ''))) ?>">
+                                                    <div class="card-body">
+                                                        <h5 class="card-title course-title-text"><?= esc($course['title'] ?? 'Untitled') ?></h5>
+                                                        <p class="card-text course-desc-text"><?= esc($course['description'] ?? 'No description available.') ?></p>
+                                                        <?php if (!empty($course['course_code'])): ?>
+                                                            <p class="text-muted"><small>Code: <?= esc($course['course_code']) ?></small></p>
+                                                        <?php endif; ?>
+                                                        <a href="<?= base_url('admin/courses/view/' . ($course['id'] ?? '')) ?>" class="btn btn-primary">View Course</a>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <a href="<?= base_url('admin/courses/view/' . ($course['id'] ?? '')) ?>" class="btn btn-sm btn-primary">Open</a>
-                                                </div>
-                                            </li>
+                                            </div>
                                         <?php endforeach; ?>
-                                    </ul>
-                                <?php else: ?>
-                                    <p class="text-muted mt-3 mb-0">No courses yet.</p>
-                                <?php endif; ?>
+                                    <?php else: ?>
+                                        <div class="col-12">
+                                            <div class="alert alert-info">No courses available at the moment.</div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     <?php else: ?>
@@ -595,7 +674,73 @@
         </div>
     </div>
 </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+$(document).ready(function() {
+    // User Management Search - Filter users as you type
+    $('#userSearchInput').on('keyup', function() {
+        // Get the search value and convert to lowercase
+        var searchValue = $(this).val().toLowerCase();
+        
+        // Loop through each user row in the table
+        $('.user-row').each(function() {
+            // Get the user's name, email, and role from data attributes
+            var userName = $(this).data('name') || '';
+            var userEmail = $(this).data('email') || '';
+            var userRole = $(this).data('role') || '';
+            
+            // Check if search term matches name, email, or role
+            var matches = userName.indexOf(searchValue) > -1 || 
+                         userEmail.indexOf(searchValue) > -1 || 
+                         userRole.indexOf(searchValue) > -1;
+            
+            // Show the row if it matches, hide if it doesn't
+            if (matches || searchValue === '') {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+    
+    // Course Management Search - Filter courses as you type (client-side)
+    $('#courseSearchInput').on('keyup', function() {
+        // Get the search value and convert to lowercase, trim whitespace
+        var searchValue = $(this).val().toLowerCase().trim();
+        
+        // Loop through each course card
+        $('.course-item').each(function() {
+            // Get the course title, description, and code from data attributes
+            var courseTitle = $(this).attr('data-title') || $(this).data('title') || '';
+            var courseDescription = $(this).attr('data-description') || $(this).data('description') || '';
+            var courseCode = $(this).attr('data-code') || $(this).data('code') || '';
+            
+            // Also get text from visible elements as fallback
+            var visibleTitle = $(this).find('.course-title-text').text().toLowerCase() || '';
+            var visibleDescription = $(this).find('.course-desc-text').text().toLowerCase() || '';
+            
+            // Combine all searchable text
+            var allText = (courseTitle + ' ' + courseDescription + ' ' + courseCode + ' ' + visibleTitle + ' ' + visibleDescription).toLowerCase().replace(/\s+/g, ' ').trim();
+            
+            // Check if search term matches any part of the text
+            var matches = allText.indexOf(searchValue) > -1 || searchValue === '';
+            
+            // Show or hide the card's parent column
+            if (matches) {
+                $(this).closest('.col-md-3').show();
+            } else {
+                $(this).closest('.col-md-3').hide();
+            }
+        });
+    });
+    
+    // Prevent form submission for course search (use instant filtering instead)
+    $('#adminCourseSearchForm').on('submit', function(e) {
+        e.preventDefault();
+        // The keyup event above handles the filtering
+    });
+});
+
 // Initialize Bootstrap tooltips
 document.addEventListener('DOMContentLoaded', function() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -607,31 +752,37 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get the instructor dropdown element
     var instructorDropdown = document.getElementById('instructor_id');
     
-    // Listen for changes when user selects an instructor
-    instructorDropdown.addEventListener('change', function() {
-        // Get the selected option
-        var selectedOption = this.options[this.selectedIndex];
-        
-        // Get the instructor name and email from the selected option
-        var teacherName = selectedOption.getAttribute('data-teacher-name');
-        var teacherEmail = selectedOption.getAttribute('data-teacher-email');
-        
-        // Get the input fields
-        var nameField = document.getElementById('instructor_name');
-        var emailField = document.getElementById('instructor_email');
-        
-        // If an instructor is selected (not the default "Select Instructor")
-        if (this.value !== '') {
-            // Fill in the name field
-            nameField.value = teacherName || '';
-            // Fill in the email field
-            emailField.value = teacherEmail || '';
-        } else {
-            // If "Select Instructor" is selected, clear the fields
-            nameField.value = '';
-            emailField.value = '';
-        }
-    });
+    // Only add event listener if the element exists (only on create course page)
+    if (instructorDropdown) {
+        // Listen for changes when user selects an instructor
+        instructorDropdown.addEventListener('change', function() {
+            // Get the selected option
+            var selectedOption = this.options[this.selectedIndex];
+            
+            // Get the instructor name and email from the selected option
+            var teacherName = selectedOption.getAttribute('data-teacher-name');
+            var teacherEmail = selectedOption.getAttribute('data-teacher-email');
+            
+            // Get the input fields
+            var nameField = document.getElementById('instructor_name');
+            var emailField = document.getElementById('instructor_email');
+            
+            // Only fill if fields exist
+            if (nameField && emailField) {
+                // If an instructor is selected (not the default "Select Instructor")
+                if (this.value !== '') {
+                    // Fill in the name field
+                    nameField.value = teacherName || '';
+                    // Fill in the email field
+                    emailField.value = teacherEmail || '';
+                } else {
+                    // If "Select Instructor" is selected, clear the fields
+                    nameField.value = '';
+                    emailField.value = '';
+                }
+            }
+        });
+    }
 });
 </script>
 

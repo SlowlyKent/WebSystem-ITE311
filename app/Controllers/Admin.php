@@ -120,9 +120,11 @@ class Admin extends Controller
         $endTime = $this->request->getPost('end_time');
         $endDate = $this->request->getPost('end_date');
         $enrollmentLimit = $this->request->getPost('enrollment_limit');
-        $status = $this->request->getPost('status');
-        $allowSelfEnrollment = $this->request->getPost('allow_self_enrollment');
         $gradingScheme = $this->request->getPost('grading_scheme');
+        
+        // Always set status to Active and allow_self_enrollment to Yes (1)
+        $status = 'Active';
+        $allowSelfEnrollment = 1;
         $prerequisiteCourses = $this->request->getPost('prerequisite_courses');
 
         // Basic validation
@@ -223,8 +225,8 @@ class Admin extends Controller
             'end_time' => !empty($endTime) ? $endTime : null,
             'end_date' => !empty($endDate) ? $endDate : null,
             'enrollment_limit' => !empty($enrollmentLimit) ? (int)$enrollmentLimit : null,
-            'status' => !empty($status) ? $status : 'Active',
-            'allow_self_enrollment' => !empty($allowSelfEnrollment) ? (int)$allowSelfEnrollment : 0,
+            'status' => 'Active', // Always set to Active
+            'allow_self_enrollment' => 1, // Always set to Yes (1)
             'grading_scheme' => !empty($gradingScheme) ? $gradingScheme : null
         ];
 
@@ -251,6 +253,17 @@ class Admin extends Controller
             try {
                 $notificationModel = new \App\Models\NotificationModel();
                 $userName = session()->get('name') ?? 'Admin';
+                $adminId = (int) session()->get('user_id');
+                
+                // Notify the admin who created the course
+                if ($adminId > 0) {
+                    $notificationModel->insert([
+                        'user_id' => $adminId,
+                        'message' => 'You have successfully created a new course: ' . $title . ' (' . $courseCode . ')',
+                        'is_read' => 0,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
+                }
                 
                 // Notify all students about the new course
                 $db = \Config\Database::connect();
@@ -385,6 +398,27 @@ class Admin extends Controller
 
         // CodeIgniter uses prepared statements automatically through Model
         if ($userModel->insert($data)) {
+            // Create notification for admin who created the account
+            try {
+                $notificationModel = new \App\Models\NotificationModel();
+                $adminId = (int) session()->get('user_id');
+                $adminName = session()->get('name') ?? 'Admin';
+                $newUserName = $data['name'];
+                $newUserRole = ucfirst($data['role']);
+                
+                if ($adminId > 0) {
+                    $notificationModel->insert([
+                        'user_id' => $adminId,
+                        'message' => 'You have successfully created a new ' . $newUserRole . ' account: ' . $newUserName . ' (' . $data['email'] . ')',
+                        'is_read' => 0,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                // Log error but don't fail the user creation
+                log_message('error', 'Failed to create account creation notification: ' . $e->getMessage());
+            }
+            
             session()->setFlashdata('success', 'User created successfully.');
             return redirect()->to(base_url('admin/users'));
         } else {

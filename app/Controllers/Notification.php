@@ -26,11 +26,12 @@ class Notification extends BaseController
         $nm = new \App\Models\NotificationModel();
         $unread = $nm->getUnreadCount($userId);
 
-        // Optional limit parameter (1..50), default 10
-        $limit = (int) ($this->request->getGet('limit') ?? 10);
-        if ($limit < 1) { $limit = 10; }
+        // Optional limit parameter (1..50), default 5 as per lab requirements
+        $limit = (int) ($this->request->getGet('limit') ?? 5);
+        if ($limit < 1) { $limit = 5; }
         if ($limit > 50) { $limit = 50; }
 
+        // Get latest notifications (limit 5 as per lab exercise)
         $recent = $nm->getNotificationsForUser($userId, $limit);
 
         return $this->response->setJSON([
