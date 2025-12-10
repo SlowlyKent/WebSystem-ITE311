@@ -22,7 +22,11 @@
                         
                         <div class="mb-3">
                             <label for="file" class="form-label">Choose file</label>
-                            <input type="file" class="form-control" id="file" name="file" required>
+                            <input type="file" class="form-control" id="file" name="file" accept=".pdf,.ppt,.pptx" required>
+                            <small class="form-text text-muted">
+                                <strong>Allowed file types:</strong> PDF and PPT (PowerPoint) only. 
+                                <br>Other file types (PNG, EXE, DOCX, etc.) are not allowed.
+                            </small>
                         </div>
 
                         <div class="d-flex gap-2">
@@ -39,4 +43,40 @@
         </div>
     </div>
 </div>
+
+<script>
+// Client-side validation: Check file type before submitting
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('file');
+    const form = fileInput.closest('form');
+    
+    // List of allowed file extensions
+    const allowedExtensions = ['pdf', 'ppt', 'pptx'];
+    
+    // When user selects a file, check if it's valid
+    fileInput.addEventListener('change', function() {
+        const fileName = this.files[0]?.name || '';
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        
+        // Check if the file extension is in our allowed list
+        if (fileName && !allowedExtensions.includes(fileExtension)) {
+            alert('❌ Invalid file type!\n\nOnly PPT (PowerPoint) and PDF files are allowed.\n\nYour file: ' + fileName + '\nFile type: ' + fileExtension.toUpperCase() + '\n\nPlease select a PDF or PPT file.');
+            // Clear the file input
+            this.value = '';
+        }
+    });
+    
+    // Also validate when form is submitted (double check)
+    form.addEventListener('submit', function(e) {
+        const fileName = fileInput.files[0]?.name || '';
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        
+        if (fileName && !allowedExtensions.includes(fileExtension)) {
+            e.preventDefault(); // Stop form submission
+            alert('❌ Invalid file type!\n\nOnly PPT (PowerPoint) and PDF files are allowed.\n\nPlease select a PDF or PPT file.');
+            return false;
+        }
+    });
+});
+</script>
 <?= $this->endSection() ?>

@@ -234,6 +234,30 @@ class Material extends BaseController
             return redirect()->back()->with('error', 'No valid file uploaded.');
         }
 
+        // Step 1: Get the file extension (the part after the dot, like "pdf" or "ppt")
+        $fileExtension = strtolower($file->getClientExtension());
+        
+        // Step 2: List of allowed file types (only PPT and PDF)
+        $allowedExtensions = ['pdf', 'ppt', 'pptx'];
+        
+        // Step 3: Check if the uploaded file extension is in our allowed list
+        if (!in_array($fileExtension, $allowedExtensions)) {
+            return redirect()->back()->with('error', 'Invalid file type! Only PPT (PowerPoint) and PDF files are allowed. Your file type: ' . strtoupper($fileExtension));
+        }
+
+        // Step 4: Also check the MIME type for extra security
+        // MIME type is like "application/pdf" or "application/vnd.ms-powerpoint"
+        $allowedMimeTypes = [
+            'application/pdf',                                    // PDF files
+            'application/vnd.ms-powerpoint',                     // Old PPT format
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation'  // New PPTX format
+        ];
+        
+        $fileMimeType = $file->getClientMimeType();
+        if (!in_array($fileMimeType, $allowedMimeTypes)) {
+            return redirect()->back()->with('error', 'Invalid file format! Only PPT (PowerPoint) and PDF files are allowed.');
+        }
+
         $newName = $file->getRandomName();
         $targetDir = FCPATH . 'uploads/materials';
         if (!is_dir($targetDir)) {
