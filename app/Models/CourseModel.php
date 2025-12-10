@@ -24,6 +24,8 @@ class CourseModel extends Model
         'course_category',
         'section',
         'start_date',
+        'start_time',
+        'end_time',
         'end_date',
         'enrollment_limit',
         'status',

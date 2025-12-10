@@ -458,6 +458,20 @@
                                             
                                             <div class="row">
                                                 <div class="col-md-6 mb-3">
+                                                    <label for="start_time" class="form-label">Start Time <span class="text-danger">*</span></label>
+                                                    <input type="time" class="form-control" id="start_time" name="start_time" required>
+                                                    <small class="form-text text-muted">Example: 1:00 PM (13:00 in 24-hour format)</small>
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="end_time" class="form-label">End Time <span class="text-danger">*</span></label>
+                                                    <input type="time" class="form-control" id="end_time" name="end_time" required>
+                                                    <small class="form-text text-muted">Example: 4:00 PM (16:00 in 24-hour format)</small>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
                                                     <label for="enrollment_limit" class="form-label">Enrollment Limit (Max Students)</label>
                                                     <input type="number" class="form-control" id="enrollment_limit" name="enrollment_limit" min="1" placeholder="e.g., 30">
                                                 </div>

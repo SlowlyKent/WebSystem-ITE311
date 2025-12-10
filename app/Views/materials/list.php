@@ -78,6 +78,18 @@
                                     <?php endif; ?>
                                 </div>
                                 <?php endif; ?>
+                                <?php if (!empty($course['start_time']) || !empty($course['end_time'])): ?>
+                                <div class="col-md-6 mb-3">
+                                    <strong>Class Time:</strong><br>
+                                    <?php if (!empty($course['start_time']) && !empty($course['end_time'])): ?>
+                                        <small><?= esc(date('g:i A', strtotime($course['start_time']))) ?> - <?= esc(date('g:i A', strtotime($course['end_time']))) ?></small>
+                                    <?php elseif (!empty($course['start_time'])): ?>
+                                        <small>Start: <?= esc(date('g:i A', strtotime($course['start_time']))) ?></small>
+                                    <?php elseif (!empty($course['end_time'])): ?>
+                                        <small>End: <?= esc(date('g:i A', strtotime($course['end_time']))) ?></small>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endif; ?>
                                 <?php if (!empty($course['grading_scheme'])): ?>
                                 <div class="col-md-6 mb-3">
                                     <strong>Grading Scheme:</strong> <?= esc($course['grading_scheme']) ?>

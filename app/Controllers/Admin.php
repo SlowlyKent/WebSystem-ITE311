@@ -116,6 +116,8 @@ class Admin extends Controller
         $courseCategory = $this->request->getPost('course_category');
         $section = $this->request->getPost('section');
         $startDate = $this->request->getPost('start_date');
+        $startTime = $this->request->getPost('start_time');
+        $endTime = $this->request->getPost('end_time');
         $endDate = $this->request->getPost('end_date');
         $enrollmentLimit = $this->request->getPost('enrollment_limit');
         $status = $this->request->getPost('status');
@@ -139,20 +141,65 @@ class Admin extends Controller
             return redirect()->to(base_url('admin/courses/create'));
         }
 
-        // Check if course code already exists in database
-        // This prevents duplicate course codes
-        $existingCourseByCode = $courseModel->where('course_code', $courseCode)->first();
-        if ($existingCourseByCode) {
-            session()->setFlashdata('error', 'Course code "' . $courseCode . '" already exists. Please use a different course code.');
+        // Validate time fields are provided
+        if (empty($startTime)) {
+            session()->setFlashdata('error', 'Start time is required.');
             return redirect()->to(base_url('admin/courses/create'));
         }
 
-        // Check if course name (title) already exists in database
-        // This prevents duplicate course names
-        $existingCourseByName = $courseModel->where('title', $title)->first();
-        if ($existingCourseByName) {
-            session()->setFlashdata('error', 'Course name "' . $title . '" already exists. Please use a different course name.');
+        if (empty($endTime)) {
+            session()->setFlashdata('error', 'End time is required.');
             return redirect()->to(base_url('admin/courses/create'));
+        }
+
+        // Validate that end time is after start time
+        if ($endTime <= $startTime) {
+            session()->setFlashdata('error', 'End time must be after start time.');
+            return redirect()->to(base_url('admin/courses/create'));
+        }
+
+        // Step 1: Check for time conflict
+        // Rule: If course_code AND title are the same AND times overlap OR exact same = REJECT
+        // Rule: If course_code is same but title is different OR times don't overlap = ALLOW
+        
+        // Get all existing courses with the same course code (case-insensitive comparison)
+        $existingCoursesWithSameCode = $courseModel->where('course_code', $courseCode)->findAll();
+        
+        // Check each existing course for conflicts
+        foreach ($existingCoursesWithSameCode as $existingCourse) {
+            $existingTitle = trim($existingCourse['title'] ?? '');
+            $existingStartTime = $existingCourse['start_time'] ?? '';
+            $existingEndTime = $existingCourse['end_time'] ?? '';
+            
+            // Skip if existing course doesn't have time set
+            if (empty($existingStartTime) || empty($existingEndTime)) {
+                continue; // No time conflict if existing course has no time
+            }
+            
+            // Check if course name (title) is the same (case-insensitive, trimmed)
+            $titleTrimmed = trim($title);
+            if (strtolower($existingTitle) === strtolower($titleTrimmed)) {
+                // Same course code AND same name - check if times are exact same OR overlap
+                
+                // First check: Are times exactly the same?
+                if ($startTime === $existingStartTime && $endTime === $existingEndTime) {
+                    // Exact same time - this is a conflict!
+                    $existingTimeDisplay = date('g:i A', strtotime($existingStartTime)) . ' - ' . date('g:i A', strtotime($existingEndTime));
+                    session()->setFlashdata('error', 'Time conflict detected! Course "' . $title . '" with code "' . $courseCode . '" already exists with the exact same time: ' . $existingTimeDisplay . '. Please use a different time or course name.');
+                    return redirect()->to(base_url('admin/courses/create'));
+                }
+                
+                // Second check: Do times overlap?
+                if ($this->checkTimeOverlap($startTime, $endTime, $existingStartTime, $existingEndTime)) {
+                    // Times overlap - this is a conflict!
+                    $existingTimeDisplay = date('g:i A', strtotime($existingStartTime)) . ' - ' . date('g:i A', strtotime($existingEndTime));
+                    $newTimeDisplay = date('g:i A', strtotime($startTime)) . ' - ' . date('g:i A', strtotime($endTime));
+                    session()->setFlashdata('error', 'Time conflict detected! Course "' . $title . '" with code "' . $courseCode . '" already exists with time ' . $existingTimeDisplay . '. Your time: ' . $newTimeDisplay . '. Please use a different time or course name.');
+                    return redirect()->to(base_url('admin/courses/create'));
+                }
+            }
+            // If course code is same but name is different, it's allowed (different course)
+            // If course code is same, name is same, but times don't overlap, it's allowed
         }
 
         // Prepare data to save
@@ -172,6 +219,8 @@ class Admin extends Controller
             'course_category' => !empty($courseCategory) ? $courseCategory : null,
             'section' => !empty($section) ? $section : null,
             'start_date' => !empty($startDate) ? $startDate : null,
+            'start_time' => !empty($startTime) ? $startTime : null,
+            'end_time' => !empty($endTime) ? $endTime : null,
             'end_date' => !empty($endDate) ? $endDate : null,
             'enrollment_limit' => !empty($enrollmentLimit) ? (int)$enrollmentLimit : null,
             'status' => !empty($status) ? $status : 'Active',
@@ -738,6 +787,40 @@ class Admin extends Controller
             session()->setFlashdata('error', 'Failed to deactivate enrollment.');
             return redirect()->back();
         }
+    }
+
+    // Helper function to check if two time ranges overlap
+    // This function checks if the new course time overlaps with an existing course time
+    private function checkTimeOverlap($newStartTime, $newEndTime, $existingStartTime, $existingEndTime)
+    {
+        // Convert time strings to timestamps for easier comparison
+        // We'll use a fixed date as a base, just for time comparison
+        $baseDate = '2000-01-01';
+        
+        $newStart = strtotime($baseDate . ' ' . $newStartTime);
+        $newEnd = strtotime($baseDate . ' ' . $newEndTime);
+        $existingStart = strtotime($baseDate . ' ' . $existingStartTime);
+        $existingEnd = strtotime($baseDate . ' ' . $existingEndTime);
+        
+        // If strtotime fails, return false (shouldn't happen with valid time format)
+        if ($newStart === false || $newEnd === false || $existingStart === false || $existingEnd === false) {
+            return false;
+        }
+        
+        // Check if times overlap
+        // Two time ranges overlap if:
+        // - New start is between existing start and end (inclusive start, exclusive end), OR
+        // - New end is between existing start and end (exclusive start, inclusive end), OR
+        // - New time completely contains existing time, OR
+        // - Existing time completely contains new time
+        if (($newStart >= $existingStart && $newStart < $existingEnd) ||
+            ($newEnd > $existingStart && $newEnd <= $existingEnd) ||
+            ($newStart <= $existingStart && $newEnd >= $existingEnd) ||
+            ($newStart >= $existingStart && $newEnd <= $existingEnd)) {
+            return true; // Times overlap
+        }
+        
+        return false; // No overlap
     }
 }
 
