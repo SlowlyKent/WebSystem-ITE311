@@ -71,7 +71,7 @@ class Security extends BaseConfig
      *
      * Regenerate CSRF Token on every submission.
      */
-    public bool $regenerate = true;
+    public bool $regenerate = false; // Set to false to prevent token mismatch issues
 
     /**
      * --------------------------------------------------------------------------
@@ -82,5 +82,16 @@ class Security extends BaseConfig
      *
      * @see https://codeigniter4.github.io/userguide/libraries/security.html#redirection-on-failure
      */
-    public bool $redirect = (ENVIRONMENT === 'production');
+    public bool $redirect = false; // Set to false for better error handling
+    
+    /**
+     * --------------------------------------------------------------------------
+     * CSRF Exclude URIs
+     * --------------------------------------------------------------------------
+     *
+     * URIs which should be excluded from CSRF protection.
+     * 
+     * @var list<string>
+     */
+    public array $excludeURIs = [];
 }

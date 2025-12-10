@@ -25,11 +25,23 @@ $routes->post('/course/enroll', 'Course::enroll');
 
 // Teacher Routes
 $routes->get('teacher/courses', 'Teacher::courses');
+$routes->get('teacher/courses/create', 'Teacher::createCourse');
+$routes->post('teacher/courses/store', 'Teacher::storeCourse');
 $routes->get('teacher/courses/view/(:num)', 'Material::index/$1');
 
 // Admin Routes
 $routes->get('admin/courses', 'Admin::courses');
+$routes->get('admin/courses/create', 'Admin::createCourse');
+$routes->post('admin/courses/store', 'Admin::storeCourse');
 $routes->get('admin/courses/view/(:num)', 'Material::index/$1');
+$routes->get('admin/users', 'Admin::users');
+$routes->get('admin/users/create', 'Admin::createUser');
+$routes->post('admin/users/store', 'Admin::storeUser');
+$routes->get('admin/users/edit/(:num)', 'Admin::editUser/$1');
+$routes->post('admin/users/update/(:num)', 'Admin::updateUser/$1');
+$routes->get('admin/users/delete/(:num)', 'Admin::deleteUser/$1');
+$routes->get('admin/users/activate/(:num)', 'Admin::activateUser/$1');
+$routes->get('admin/users/inactivate/(:num)', 'Admin::inactivateUser/$1');
 
 // Student Routes
 $routes->get('student/enrollments', 'Student::enrollments');
@@ -46,4 +58,3 @@ $routes->get('/materials/download/(:num)', 'Material::download/$1');
 $routes->get('/notifications', 'Notification::get');
 $routes->post('/notifications/mark_read/(:num)', 'Notification::mark_as_read/$1');
 $routes->post('/notifications/mark_all', 'Notification::mark_all');
-

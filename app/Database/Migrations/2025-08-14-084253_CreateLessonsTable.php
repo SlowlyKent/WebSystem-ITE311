@@ -9,13 +9,36 @@ class CreateLessonsTable extends Migration
     public function up(): void
     {
         $this->forge->addField([
-            'id'         => ['type' => 'INT', 'unsigned' => true, 'auto_increment' => true],
-            'course_id'  => ['type' => 'INT', 'unsigned' => true],
-            'title'      => ['type' => 'VARCHAR', 'constraint' => 150],
-            'content'    => ['type' => 'TEXT', 'null' => true],
-            'sort_order' => ['type' => 'INT', 'unsigned' => true, 'default' => 1],
-            'created_at' => ['type' => 'DATETIME', 'null' => true],
-            'updated_at' => ['type' => 'DATETIME', 'null' => true],
+            'id'         => [
+                'type' => 'INT', 
+                'unsigned' => true, 
+                'auto_increment' => true
+            ],
+            'course_id'  => [
+                'type' => 'INT', 
+                'unsigned' => true
+            ],
+            'title'      => [
+                'type' => 'VARCHAR', 
+                'constraint' => 150
+            ],
+            'content'    => [
+                'type' => 'TEXT', 
+                'null' => true
+            ],
+            'sort_order' => [
+                'type' => 'INT', 
+                'unsigned' => true, 
+                'default' => 1
+            ],
+            'created_at' => [
+                'type' => 'DATETIME', 
+                'null' => true
+            ],
+            'updated_at' => [
+                'type' => 'DATETIME', 
+                'null' => true
+            ],
         ]);
 
         $this->forge->addKey('id', true);

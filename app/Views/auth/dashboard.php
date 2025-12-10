@@ -7,8 +7,7 @@
     <?php endif; ?>
     
     <!-- Welcome Message -->
-
-
+     
     <?php
       // Wrapper: load role-specific partials
       $role = $user['role'] ?? session('role');

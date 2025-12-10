@@ -18,6 +18,7 @@
                         <?php if ($role === 'admin'): ?>
                             <li><a class="nav-link" href="<?= base_url('dashboard'); ?>">Admin Dashboard</a></li>
                             <li><a class="nav-link" href="<?= base_url('admin/courses'); ?>">Course Management</a></li>
+                            <li><a class="nav-link" href="<?= base_url('admin/users'); ?>">User Management</a></li>
                         <?php elseif ($role === 'teacher'): ?>
                             <li><a class="nav-link" href="<?= base_url('dashboard'); ?>">Teacher Dashboard</a></li>
                             <li><a class="nav-link" href="<?= base_url('teacher/courses'); ?>">My Courses</a></li>

@@ -8,13 +8,33 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 class Course extends BaseController
 {
+    
     public function enroll()
     {
-        $userId = session()->get('user_id');
-        if (!$userId) {
+        // Security 1: Authorization Bypass Protection
+        // Check if user is logged in and is a student
+        if (!session()->get('isLoggedIn')) {
             return $this->response
                 ->setStatusCode(401)
-                ->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+                ->setJSON(['status' => 'error', 'message' => 'Unauthorized. Please login first.']);
+        }
+        
+        // Get user ID from session only (not from POST to prevent tampering)
+        $userId = (int) session()->get('user_id');
+        if (!$userId || $userId <= 0) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON(['status' => 'error', 'message' => 'Unauthorized. Invalid user session.']);
+        }
+        
+        // Security 4: Data Tampering Protection
+        // Ensure user can only enroll themselves (prevent user_id override)
+        $postUserId = $this->request->getPost('user_id');
+        if ($postUserId && (int)$postUserId !== $userId) {
+            // Someone tried to enroll another user - block it
+            return $this->response
+                ->setStatusCode(403)
+                ->setJSON(['status' => 'error', 'message' => 'Forbidden. You can only enroll yourself.']);
         }
 
         if (!$this->request->is('post')) {
@@ -23,16 +43,27 @@ class Course extends BaseController
                 ->setJSON(['status' => 'error', 'message' => 'Method not allowed']);
         }
 
-        $courseId = (int) $this->request->getPost('course_id');
-        if ($courseId <= 0) {
+        // Security 2: SQL Injection Protection
+        // Validate course_id - must be positive integer only
+        $courseIdInput = $this->request->getPost('course_id');
+        if (empty($courseIdInput)) {
             return $this->response
                 ->setStatusCode(400)
-                ->setJSON(['status' => 'error', 'message' => 'Invalid course ID']);
+                ->setJSON(['status' => 'error', 'message' => 'Course ID is required']);
+        }
+        
+        // Convert to integer and validate (prevents SQL injection)
+        $courseId = (int) $courseIdInput;
+        if ($courseId <= 0 || !is_numeric($courseIdInput) || (string)$courseId !== (string)$courseIdInput) {
+            // Invalid input - not a pure integer
+            return $this->response
+                ->setStatusCode(400)
+                ->setJSON(['status' => 'error', 'message' => 'Invalid course ID. Must be a valid number.']);
         }
 
         $db = \Config\Database::connect();
         $course = $db->table('courses')
-                     ->select('id, title, description')
+                     ->select('id, title, description, status, enrollment_limit, allow_self_enrollment')
                      ->where('id', $courseId)
                      ->get()
                      ->getRowArray();
@@ -41,6 +72,42 @@ class Course extends BaseController
             return $this->response
                 ->setStatusCode(404)
                 ->setJSON(['status' => 'error', 'message' => 'Course not found']);
+        }
+
+        // Check if course is Active
+        if ($course['status'] !== 'Active') {
+            return $this->response
+                ->setJSON(['status' => 'error', 'message' => 'Course is not active. Enrollment is not allowed.']);
+        }
+
+        // Check enrollment limit
+        if (!empty($course['enrollment_limit'])) {
+            $currentEnrollments = $db->table('enrollments')
+                                    ->where('course_id', $courseId)
+                                    ->countAllResults();
+            if ($currentEnrollments >= (int)$course['enrollment_limit']) {
+                return $this->response
+                    ->setJSON(['status' => 'error', 'message' => 'Course enrollment limit reached.']);
+            }
+        }
+
+        // Check prerequisites
+        $prerequisites = $db->table('course_prerequisites')
+                           ->where('course_id', $courseId)
+                           ->get()
+                           ->getResultArray();
+        
+        if (!empty($prerequisites)) {
+            $enrollments = new EnrollmentModel();
+            foreach ($prerequisites as $prereq) {
+                $prereqCourseId = $prereq['prerequisite_course_id'];
+                if (!$enrollments->isAlreadyEnrolled($userId, $prereqCourseId)) {
+                    $prereqCourse = $db->table('courses')->where('id', $prereqCourseId)->get()->getRowArray();
+                    $prereqTitle = $prereqCourse['title'] ?? 'prerequisite course';
+                    return $this->response
+                        ->setJSON(['status' => 'error', 'message' => 'You must complete the prerequisite course: ' . $prereqTitle]);
+                }
+            }
         }
 
         $enrollments = new EnrollmentModel();

@@ -17,6 +17,7 @@
     <?php endif; ?>
     
     <form action="" method="post">
+        <?= csrf_field() ?>
         <div class="form-group">
             <label for="name" class="form-label">Name</label>
             <input type="text" class="form-control" id="name" name="name" value="<?= set_value('name') ?>" required>
@@ -29,12 +30,13 @@
         
         <div class="form-group">
             <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password" required>
+            <input type="password" class="form-control" id="password" name="password" required minlength="6" pattern="[A-Za-z0-9]+" title="Password can only contain letters and numbers. No special characters allowed.">
+            <small class="form-text text-muted">Only letters and numbers allowed. No special characters.</small>
         </div>
         
         <div class="form-group">
             <label for="password_confirm" class="form-label">Confirm Password</label>
-            <input type="password" class="form-control" id="password_confirm" name="password_confirm" required>
+            <input type="password" class="form-control" id="password_confirm" name="password_confirm" required minlength="6" pattern="[A-Za-z0-9]+" title="Password can only contain letters and numbers. No special characters allowed.">
         </div>
         
         <button type="submit" class="btn">Register</button>

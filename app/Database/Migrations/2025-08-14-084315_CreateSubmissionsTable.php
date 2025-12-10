@@ -9,15 +9,44 @@ class CreateSubmissionsTable extends Migration
     public function up(): void
     {
         $this->forge->addField([
-            'id'          => ['type' => 'INT', 'unsigned' => true, 'auto_increment' => true],
-            'quiz_id'     => ['type' => 'INT', 'unsigned' => true],
-            'user_id'     => ['type' => 'INT', 'unsigned' => true],
-            'answer'      => ['type' => 'TEXT'],                   
-            'score'       => ['type' => 'INT', 'unsigned' => true, 'default' => 0],
-            'is_correct'  => ['type' => 'TINYINT', 'constraint' => 1, 'default' => 0],
-            'submitted_at'=> ['type' => 'DATETIME', 'null' => true],
-            'created_at'  => ['type' => 'DATETIME', 'null' => true],
-            'updated_at'  => ['type' => 'DATETIME', 'null' => true],
+            'id'          => [
+                'type' => 'INT', 
+                'unsigned' => true, 
+                'auto_increment' => true
+            ],
+            'quiz_id'     => [
+                'type' => 'INT', 
+                'unsigned' => true
+            ],
+            'user_id'     => [
+                'type' => 'INT', 
+                'unsigned' => true
+            ],
+            'answer'      => [
+                'type' => 'TEXT'
+            ],                   
+            'score'       => [
+                'type' => 'INT', 
+                'unsigned' => true, 
+                'default' => 0
+            ],
+            'is_correct'  => [
+                'type' => 'TINYINT', 
+                'constraint' => 1, 
+                'default' => 0
+            ],
+            'submitted_at'=> [
+                'type' => 'DATETIME', 
+                'null' => true
+            ],
+            'created_at'  => [
+                'type' => 'DATETIME', 
+                'null' => true
+            ],
+            'updated_at'  => [
+                'type' => 'DATETIME', 
+                'null' => true
+            ],
         ]);
 
         $this->forge->addKey('id', true);

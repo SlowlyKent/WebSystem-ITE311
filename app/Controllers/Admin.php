@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use CodeIgniter\Controller;
 use App\Models\CourseModel;
+use App\Models\UserModel;
 
 class Admin extends Controller
 {
@@ -50,6 +51,533 @@ class Admin extends Controller
         // Render Course Management inside the admin dashboard view
         $data['showCourses'] = true;
         return view('admin', $data);
+    }
+
+    public function createCourse()
+    {
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $userModel = new UserModel();
+        $courseModel = new CourseModel();
+        
+        // Get all teachers for the instructor dropdown
+        $teachers = $userModel->where('role', 'teacher')->findAll();
+        
+        // Get all existing courses for prerequisites dropdown
+        $allCourses = $courseModel->findAll();
+
+        $data = [
+            'title'   => 'Create Course',
+            'user'    => [
+                'name'  => session()->get('name'),
+                'email' => session()->get('email'),
+                'role'  => session()->get('role')
+            ],
+            'teachers' => $teachers,
+            'allCourses' => $allCourses
+        ];
+
+        $data['showCreateCourse'] = true;
+        return view('admin', $data);
+    }
+
+    public function storeCourse()
+    {
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $courseModel = new CourseModel();
+        
+        // Get all form data
+        $title = $this->request->getPost('title');
+        $courseCode = $this->request->getPost('course_code');
+        $description = $this->request->getPost('description');
+        $shortDescription = $this->request->getPost('short_description');
+        $yearLevel = $this->request->getPost('year_level');
+        $semester = $this->request->getPost('semester');
+        $schoolYear = $this->request->getPost('school_year');
+        $department = $this->request->getPost('department');
+        $instructorId = $this->request->getPost('instructor_id');
+        $instructorName = $this->request->getPost('instructor_name');
+        $instructorEmail = $this->request->getPost('instructor_email');
+        
+        // Validate instructor email format if provided (additional security layer)
+        if (!empty($instructorEmail) && !filter_var($instructorEmail, FILTER_VALIDATE_EMAIL)) {
+            session()->setFlashdata('error', 'Invalid instructor email format.');
+            return redirect()->to(base_url('admin/courses/create'));
+        }
+        
+        $units = $this->request->getPost('units');
+        $courseCategory = $this->request->getPost('course_category');
+        $section = $this->request->getPost('section');
+        $startDate = $this->request->getPost('start_date');
+        $endDate = $this->request->getPost('end_date');
+        $enrollmentLimit = $this->request->getPost('enrollment_limit');
+        $status = $this->request->getPost('status');
+        $allowSelfEnrollment = $this->request->getPost('allow_self_enrollment');
+        $gradingScheme = $this->request->getPost('grading_scheme');
+        $prerequisiteCourses = $this->request->getPost('prerequisite_courses');
+
+        // Basic validation
+        if (empty($title)) {
+            session()->setFlashdata('error', 'Course name is required.');
+            return redirect()->to(base_url('admin/courses/create'));
+        }
+
+        if (empty($courseCode)) {
+            session()->setFlashdata('error', 'Course code is required.');
+            return redirect()->to(base_url('admin/courses/create'));
+        }
+
+        if (empty($description)) {
+            session()->setFlashdata('error', 'Course description is required.');
+            return redirect()->to(base_url('admin/courses/create'));
+        }
+
+        // Check if course code already exists in database
+        // This prevents duplicate course codes
+        $existingCourseByCode = $courseModel->where('course_code', $courseCode)->first();
+        if ($existingCourseByCode) {
+            session()->setFlashdata('error', 'Course code "' . $courseCode . '" already exists. Please use a different course code.');
+            return redirect()->to(base_url('admin/courses/create'));
+        }
+
+        // Check if course name (title) already exists in database
+        // This prevents duplicate course names
+        $existingCourseByName = $courseModel->where('title', $title)->first();
+        if ($existingCourseByName) {
+            session()->setFlashdata('error', 'Course name "' . $title . '" already exists. Please use a different course name.');
+            return redirect()->to(base_url('admin/courses/create'));
+        }
+
+        // Prepare data to save
+        $data = [
+            'title' => $title,
+            'course_code' => $courseCode,
+            'description' => $description,
+            'short_description' => !empty($shortDescription) ? $shortDescription : null,
+            'year_level' => !empty($yearLevel) ? $yearLevel : null,
+            'semester' => !empty($semester) ? $semester : null,
+            'school_year' => !empty($schoolYear) ? $schoolYear : null,
+            'department' => !empty($department) ? $department : null,
+            'instructor_id' => !empty($instructorId) ? $instructorId : null,
+            'instructor_name' => !empty($instructorName) ? $instructorName : null,
+            'instructor_email' => !empty($instructorEmail) ? $instructorEmail : null, // Already validated above
+            'units' => !empty($units) ? $units : null,
+            'course_category' => !empty($courseCategory) ? $courseCategory : null,
+            'section' => !empty($section) ? $section : null,
+            'start_date' => !empty($startDate) ? $startDate : null,
+            'end_date' => !empty($endDate) ? $endDate : null,
+            'enrollment_limit' => !empty($enrollmentLimit) ? (int)$enrollmentLimit : null,
+            'status' => !empty($status) ? $status : 'Active',
+            'allow_self_enrollment' => !empty($allowSelfEnrollment) ? (int)$allowSelfEnrollment : 0,
+            'grading_scheme' => !empty($gradingScheme) ? $gradingScheme : null
+        ];
+
+        // Save to database
+        if ($courseModel->insert($data)) {
+            $newCourseId = $courseModel->getInsertID();
+            
+            // Handle prerequisites (many-to-many relationship)
+            if (!empty($prerequisiteCourses) && is_array($prerequisiteCourses)) {
+                $db = \Config\Database::connect();
+                foreach ($prerequisiteCourses as $prereqId) {
+                    $prereqId = (int)$prereqId;
+                    if ($prereqId > 0 && $prereqId != $newCourseId) {
+                        $db->table('course_prerequisites')->insert([
+                            'course_id' => $newCourseId,
+                            'prerequisite_course_id' => $prereqId,
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+                    }
+                }
+            }
+            
+            // Create notification for all users about new course
+            try {
+                $notificationModel = new \App\Models\NotificationModel();
+                $userName = session()->get('name') ?? 'Admin';
+                
+                // Notify all students about the new course
+                $db = \Config\Database::connect();
+                $students = $db->table('users')->select('id')->where('role', 'student')->get()->getResultArray();
+                foreach ($students as $student) {
+                    $studentId = (int)($student['id'] ?? 0);
+                    if ($studentId > 0) {
+                        $notificationModel->insert([
+                            'user_id' => $studentId,
+                            'message' => 'New course available: ' . $title . ' (' . $courseCode . ')',
+                            'is_read' => 0,
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+                    }
+                }
+                
+                // Notify all teachers
+                $teachers = $db->table('users')->select('id')->where('role', 'teacher')->get()->getResultArray();
+                foreach ($teachers as $teacher) {
+                    $teacherId = (int)($teacher['id'] ?? 0);
+                    if ($teacherId > 0) {
+                        $notificationModel->insert([
+                            'user_id' => $teacherId,
+                            'message' => $userName . ' created a new course: ' . $title . ' (' . $courseCode . ')',
+                            'is_read' => 0,
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Log error but don't fail the course creation
+                log_message('error', 'Failed to create course notification: ' . $e->getMessage());
+            }
+            
+            session()->setFlashdata('success', 'Course created successfully.');
+            return redirect()->to(base_url('admin/courses'));
+        } else {
+            $errors = $courseModel->errors();
+            session()->setFlashdata('error', 'Failed to create course. ' . implode(', ', $errors));
+            return redirect()->to(base_url('admin/courses/create'));
+        }
+    }
+
+    public function users()
+    {
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $userModel = new UserModel();
+        // Get all users from the database
+        $users = $userModel->findAll();
+
+        $data = [
+            'title'   => 'User Management',
+            'user'    => [
+                'name'  => session()->get('name'),
+                'email' => session()->get('email'),
+                'role'  => session()->get('role')
+            ],
+            'users' => $users,
+        ];
+
+        // Render User Management inside the admin dashboard view
+        $data['showUsers'] = true;
+        return view('admin', $data);
+    }
+
+    public function createUser()
+    {
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $data = [
+            'title'   => 'Create User',
+            'user'    => [
+                'name'  => session()->get('name'),
+                'email' => session()->get('email'),
+                'role'  => session()->get('role')
+            ],
+        ];
+
+        $data['showCreateUser'] = true;
+        return view('admin', $data);
+    }
+
+    public function storeUser()
+    {
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $userModel = new UserModel();
+        
+        // Get and validate email format using filter_var (additional security layer)
+        $email = $this->request->getPost('email');
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            session()->setFlashdata('error', 'Invalid email format.');
+            return redirect()->to(base_url('admin/users/create'));
+        }
+        
+        // Validate password format - only alphanumeric characters allowed
+        $password = $this->request->getPost('password');
+        if (!ctype_alnum($password)) {
+            session()->setFlashdata('error', 'Password can only contain letters and numbers. No special characters allowed.');
+            return redirect()->to(base_url('admin/users/create'));
+        }
+        
+        $data = [
+            'name' => $this->request->getPost('name'),
+            'email' => $email, // Use validated email
+            'password' => $password, // Use validated password
+            'role' => $this->request->getPost('role'),
+            'status' => 'active' // New users are active by default
+        ];
+
+        // Validate role - allow admin, teacher, or student
+        if (!in_array($data['role'], ['admin', 'teacher', 'student'])) {
+            session()->setFlashdata('error', 'Invalid role. Role must be admin, teacher, or student.');
+            return redirect()->to(base_url('admin/users/create'));
+        }
+
+        // Validate password confirmation
+        if ($data['password'] !== $this->request->getPost('password_confirm')) {
+            session()->setFlashdata('error', 'Passwords do not match.');
+            return redirect()->to(base_url('admin/users/create'));
+        }
+
+        // CodeIgniter uses prepared statements automatically through Model
+        if ($userModel->insert($data)) {
+            session()->setFlashdata('success', 'User created successfully.');
+            return redirect()->to(base_url('admin/users'));
+        } else {
+            $errors = $userModel->errors();
+            session()->setFlashdata('error', implode(', ', $errors));
+            return redirect()->to(base_url('admin/users/create'));
+        }
+    }
+
+    public function editUser($id)
+    {
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->find($id);
+
+        if (!$user) {
+            session()->setFlashdata('error', 'User not found.');
+            return redirect()->to(base_url('admin/users'));
+        }
+
+        // Prevent editing your own account
+        $currentUserId = session()->get('user_id');
+        if ($id == $currentUserId) {
+            session()->setFlashdata('error', 'You cannot edit your own account.');
+            return redirect()->to(base_url('admin/users'));
+        }
+
+        // Allow editing all other users (admin, teacher, and student)
+
+        $data = [
+            'title'   => 'Edit User',
+            'user'    => [
+                'name'  => session()->get('name'),
+                'email' => session()->get('email'),
+                'role'  => session()->get('role')
+            ],
+            'editUser' => $user,
+        ];
+
+        $data['showEditUser'] = true;
+        return view('admin', $data);
+    }
+
+    public function updateUser($id)
+    {
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->find($id);
+
+        if (!$user) {
+            session()->setFlashdata('error', 'User not found.');
+            return redirect()->to(base_url('admin/users'));
+        }
+
+        // Prevent updating your own account
+        $currentUserId = session()->get('user_id');
+        if ($id == $currentUserId) {
+            session()->setFlashdata('error', 'You cannot update your own account.');
+            return redirect()->to(base_url('admin/users'));
+        }
+
+        // Allow updating all other users (admin, teacher, and student)
+
+        // Get and validate email format using filter_var (additional security layer)
+        $email = $this->request->getPost('email');
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            session()->setFlashdata('error', 'Invalid email format.');
+            return redirect()->to(base_url('admin/users/edit/' . $id));
+        }
+
+        $data = [
+            'name' => $this->request->getPost('name'),
+            'email' => $email, // Use validated email
+            'role' => $this->request->getPost('role')
+        ];
+
+        // Validate role - allow admin, teacher, or student
+        if (!in_array($data['role'], ['admin', 'teacher', 'student'])) {
+            session()->setFlashdata('error', 'Invalid role. Role must be admin, teacher, or student.');
+            return redirect()->to(base_url('admin/users/edit/' . $id));
+        }
+
+        // Update password only if provided
+        $password = $this->request->getPost('password');
+        if (!empty($password)) {
+            // Validate password format - only alphanumeric characters allowed
+            if (!ctype_alnum($password)) {
+                session()->setFlashdata('error', 'Password can only contain letters and numbers. No special characters allowed.');
+                return redirect()->to(base_url('admin/users/edit/' . $id));
+            }
+            
+            if ($password !== $this->request->getPost('password_confirm')) {
+                session()->setFlashdata('error', 'Passwords do not match.');
+                return redirect()->to(base_url('admin/users/edit/' . $id));
+            }
+            $data['password'] = $password;
+        } else {
+            // Remove password from data if not provided to avoid validation issues
+            unset($data['password']);
+        }
+
+        // Get the current logged-in admin's ID
+        $currentUserId = session()->get('user_id');
+        
+        // Add updated_by field to track who updated this user
+        $data['updated_by'] = $currentUserId;
+        
+        // Set validation rules - password is optional for updates
+        // Use permissiveRules to allow updates without password
+        $validationRules = [
+            'name' => 'required|min_length[3]|max_length[100]',
+            'email' => 'required|valid_email|is_unique[users.email,id,' . $id . ']',
+            'role' => 'required|in_list[admin,teacher,student]'
+        ];
+        
+        // If password is provided, add password validation
+        if (isset($data['password'])) {
+            $validationRules['password'] = 'min_length[6]|alpha_numeric';
+        }
+        
+        $userModel->setValidationRules($validationRules);
+        
+        if ($userModel->update($id, $data)) {
+            session()->setFlashdata('success', 'User updated successfully.');
+            return redirect()->to(base_url('admin/users'));
+        } else {
+            $errors = $userModel->errors();
+            session()->setFlashdata('error', implode(', ', $errors));
+            return redirect()->to(base_url('admin/users/edit/' . $id));
+        }
+    }
+
+    public function deleteUser($id)
+    {
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->find($id);
+
+        if (!$user) {
+            session()->setFlashdata('error', 'User not found.');
+            return redirect()->to(base_url('admin/users'));
+        }
+
+        // Prevent deleting yourself (the currently logged-in admin)
+        $currentUserId = session()->get('user_id');
+        if ($id == $currentUserId) {
+            session()->setFlashdata('error', 'You cannot delete your own account.');
+            return redirect()->to(base_url('admin/users'));
+        }
+
+        // Delete the user
+        if ($userModel->delete($id)) {
+            session()->setFlashdata('success', 'User deleted successfully.');
+        } else {
+            session()->setFlashdata('error', 'Failed to delete user.');
+        }
+
+        return redirect()->to(base_url('admin/users'));
+    }
+
+    // Activate user account
+    public function activateUser($id)
+    {
+        // Check if user is admin
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->find($id);
+
+        // Check if user exists
+        if (!$user) {
+            session()->setFlashdata('error', 'User not found.');
+            return redirect()->to(base_url('admin/users'));
+        }
+
+        // Prevent activating/deactivating yourself
+        $currentUserId = session()->get('user_id');
+        if ($id == $currentUserId) {
+            session()->setFlashdata('error', 'You cannot change your own account status.');
+            return redirect()->to(base_url('admin/users'));
+        }
+
+        // Update user status to active
+        $data = ['status' => 'active'];
+        if ($userModel->update($id, $data)) {
+            session()->setFlashdata('success', 'User activated successfully. User can now login.');
+        } else {
+            session()->setFlashdata('error', 'Failed to activate user.');
+        }
+
+        return redirect()->to(base_url('admin/users'));
+    }
+
+    // Inactivate user account
+    public function inactivateUser($id)
+    {
+        // Check if user is admin
+        if (!session()->get('isLoggedIn') || session()->get('role') !== 'admin') {
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to(base_url('login'));
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->find($id);
+
+        // Check if user exists
+        if (!$user) {
+            session()->setFlashdata('error', 'User not found.');
+            return redirect()->to(base_url('admin/users'));
+        }
+
+        // Prevent activating/deactivating yourself
+        $currentUserId = session()->get('user_id');
+        if ($id == $currentUserId) {
+            session()->setFlashdata('error', 'You cannot change your own account status.');
+            return redirect()->to(base_url('admin/users'));
+        }
+
+        // Update user status to inactive
+        $data = ['status' => 'inactive'];
+        if ($userModel->update($id, $data)) {
+            session()->setFlashdata('success', 'User inactivated successfully. User cannot login now.');
+        } else {
+            session()->setFlashdata('error', 'Failed to inactivate user.');
+        }
+
+        return redirect()->to(base_url('admin/users'));
     }
 }
 

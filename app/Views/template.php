@@ -449,8 +449,8 @@
         // Load notifications on page load
         loadNotifications();
         
-        // Refresh notifications every 60 seconds
-        setInterval(loadNotifications, 60000);
+        // Refresh notifications every 5 seconds (5000 milliseconds)
+        setInterval(loadNotifications, 5000);
     });
     </script>
     <?php endif; ?>

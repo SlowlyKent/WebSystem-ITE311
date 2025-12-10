@@ -17,19 +17,33 @@ class Auth extends Controller
             $rules = [
                 'name' => 'required|min_length[3]|max_length[100]',
                 'email' => 'required|valid_email|is_unique[users.email]',
-                'password' => 'required|min_length[6]',
+                'password' => 'required|min_length[6]|alpha_numeric',
                 'password_confirm' => 'matches[password]'
             ];
             
             if ($this->validate($rules)) {
+                // Get and validate email format using filter_var (additional security layer)
+                $email = $this->request->getPost('email');
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $session->setFlashdata('error', 'Invalid email format.');
+                    return redirect()->to('/register');
+                }
+                
+                // Validate password format - only alphanumeric characters allowed
+                $password = $this->request->getPost('password');
+                if (!ctype_alnum($password)) {
+                    $session->setFlashdata('error', 'Password can only contain letters and numbers. No special characters allowed.');
+                    return redirect()->to('/register');
+                }
+                
                 $data = [
                     'name' => $this->request->getPost('name'),
-                    'email' => $this->request->getPost('email'),
-                    'password' => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
+                    'email' => $email, // Use validated email
+                    'password' => password_hash($password, PASSWORD_DEFAULT), // Use validated password
                     'role' => 'student'
                 ];
                 
-                // Save user to database
+                // Save user to database (CodeIgniter uses prepared statements automatically)
                 if ($model->insert($data)) {
                     $session->setFlashdata('success', 'Registration successful. Please login.');
                     return redirect()->to('/login');
@@ -69,11 +83,31 @@ class Auth extends Controller
                 'password' => 'required'
             ];
             if ($this->validate($rules)) {
+                // Get and validate email format using filter_var (additional security layer)
                 $email = $this->request->getPost('email');
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $session->setFlashdata('error', 'Invalid email format.');
+                    return redirect()->to('/login');
+                }
+                
+                // Validate password format - only alphanumeric characters allowed
                 $password = $this->request->getPost('password');
+                if (!ctype_alnum($password)) {
+                    $session->setFlashdata('error', 'Password can only contain letters and numbers. No special characters allowed.');
+                    return redirect()->to('/login');
+                }
+                
+                // CodeIgniter uses prepared statements automatically through Query Builder
                 $user = $model->where('email', $email)->first();
-                // Session is Saving the user data
+                
+                // Check if user exists and password is correct
                 if ($user && password_verify($password, $user['password'])) {
+                    // Check if user account is active
+                    $userStatus = $user['status'] ?? 'active'; // Default to active if status not set
+                    if ($userStatus !== 'active') {
+                        $session->setFlashdata('error', 'Your account is inactive. Please contact administrator.');
+                        return redirect()->to('/login');
+                    }
                     $session->set([
                         'user_id' => $user['id'],
                         'name' => $user['name'],
@@ -125,12 +159,37 @@ class Auth extends Controller
         // If student, prepare enrolled and available courses
         if (session()->get('role') === 'student') {
             $userId = (int) session()->get('user_id');
+            $userModel = new \App\Models\UserModel();
+            $student = $userModel->find($userId);
+            
+            // Get student's year level and semester
+            $studentYearLevel = $student['year_level'] ?? null;
+            $studentSemester = $student['semester'] ?? null;
+            
             $enrollments = new EnrollmentModel();
             $enrolledCourses = $enrollments->getUserEnrollments($userId);
 
             $db = db_connect();
-            // Show ALL courses; the view will disable buttons for already-enrolled items
-            $availableCourses = $db->table('courses')->get()->getResultArray();
+            $builder = $db->table('courses');
+            
+            // Only show Active courses
+            $builder->where('status', 'Active');
+            
+            // Filter by student's year level and semester if they are set
+            if (!empty($studentYearLevel)) {
+                $builder->where('year_level', $studentYearLevel);
+            }
+            if (!empty($studentSemester)) {
+                $builder->where('semester', $studentSemester);
+            }
+            
+            // Exclude already enrolled courses
+            if (!empty($enrolledCourses)) {
+                $enrolledIds = array_column($enrolledCourses, 'id');
+                $builder->whereNotIn('id', $enrolledIds);
+            }
+            
+            $availableCourses = $builder->get()->getResultArray();
 
             $data['enrolledCourses'] = $enrolledCourses;
             $data['availableCourses'] = $availableCourses;

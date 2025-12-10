@@ -17,8 +17,13 @@ class UserModel extends Model
         'email', 
         'password',
         'role',
+        'status',
+        'year_level',
+        'semester',
         'created_at',
-        'updated_at'
+        'updated_at',
+        'updated_by',
+        'deleted_by'
     ];
 
     // Dates
@@ -32,7 +37,7 @@ class UserModel extends Model
     protected $validationRules = [
         'name' => 'required|min_length[3]|max_length[100]',
         'email' => 'required|valid_email|is_unique[users.email,id,{id}]',
-        'password' => 'required|min_length[6]',
+        'password' => 'required|min_length[6]|alpha_numeric',
         'role' => 'required|in_list[admin,teacher,student]'
     ];
 
@@ -49,7 +54,8 @@ class UserModel extends Model
         ],
         'password' => [
             'required' => 'Password is required',
-            'min_length' => 'Password must be at least 6 characters long'
+            'min_length' => 'Password must be at least 6 characters long',
+            'alpha_numeric' => 'Password can only contain letters and numbers. No special characters allowed.'
         ],
         'role' => [
             'required' => 'Role is required',
@@ -75,4 +81,5 @@ class UserModel extends Model
         return $data;
     }
 }
+
 

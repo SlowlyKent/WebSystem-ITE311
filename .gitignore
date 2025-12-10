@@ -1,0 +1,62 @@
+# CodeIgniter 4 .gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Writable directories (session, logs, cache, etc.)
+writable/session/*
+!writable/session/index.html
+writable/logs/*
+!writable/logs/index.html
+writable/cache/*
+!writable/cache/index.html
+writable/debugbar/*
+!writable/debugbar/index.html
+writable/uploads/*
+!writable/uploads/index.html
+uploads/*
+!uploads/.gitkeep
+
+# Composer
+/vendor/
+composer.phar
+composer.lock
+
+# Node modules (if using npm)
+node_modules/
+package-lock.json
+yarn.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build files
+build/
+.phpunit.cache
+phpunit.xml
+
+# Temporary files
+*.tmp
+*.log
+*.cache
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Session files (specific pattern)
+ci_session*
+

@@ -37,17 +37,37 @@ class Student extends Controller
         }
 
         $userId = (int) session()->get('user_id');
+        $userModel = new \App\Models\UserModel();
+        $student = $userModel->find($userId);
+        
+        // Get student's year level and semester
+        $studentYearLevel = $student['year_level'] ?? null;
+        $studentSemester = $student['semester'] ?? null;
 
         $enrollments = new EnrollmentModel();
         $enrolledCourses = $enrollments->getUserEnrollments($userId);
 
-        // Available courses = courses not in enrolled list
+        // Available courses = courses not in enrolled list, Active status, and matching year/semester (unless allow_self_enrollment is true)
         $db = db_connect();
         $builder = $db->table('courses');
+        
+        // Only show Active courses
+        $builder->where('status', 'Active');
+        
+        // Filter by student's year level and semester if they are set
+        if (!empty($studentYearLevel)) {
+            $builder->where('year_level', $studentYearLevel);
+        }
+        if (!empty($studentSemester)) {
+            $builder->where('semester', $studentSemester);
+        }
+        
+        // Exclude already enrolled courses
         if (!empty($enrolledCourses)) {
             $enrolledIds = array_column($enrolledCourses, 'id');
             $builder->whereNotIn('id', $enrolledIds);
         }
+        
         $availableCourses = $builder->get()->getResultArray();
 
         $data = [
@@ -59,6 +79,8 @@ class Student extends Controller
             ],
             'enrolledCourses' => $enrolledCourses,
             'availableCourses' => $availableCourses,
+            'studentYearLevel' => $studentYearLevel,
+            'studentSemester' => $studentSemester,
             'showEnrollments' => true,
         ];
 
